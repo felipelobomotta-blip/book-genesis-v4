@@ -33,6 +33,8 @@ Search for the top 10-15 books in the target genre/niche published in the last 5
 - "goodreads best [genre] [year]"
 - "[genre] books award winners"
 
+**Detect the book's language and origin from the raw idea.** Search primarily in the book's language. If the book is a translation, also search in the original source language. Include local bestseller platforms, literary prizes, and reader communities for the book's market. Distinguish translated foreign fiction from locally-authored literary and popular fiction — they occupy different market segments.
+
 ### Step 2: Pattern Extraction
 
 From the top 10, identify:
@@ -119,6 +121,7 @@ In addition to the market research report, ALWAYS produce `research/bestseller-d
 - Sensory detail: concrete > abstract
 - Vulnerability > competence (especially in opening chapters)
 - Micro-tension: every page needs an internal emotional contradiction
+- Sentence rhythm: [default register + how it shifts with scene pressure — name a comp title that uses a similar rhythm as anchor]
 
 ## Section 3: Emotional Rules
 - 30%+ content about human closeness/intimacy (#1 ML predictor from 20K-novel study)
