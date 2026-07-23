@@ -185,7 +185,7 @@ T={
         ('out','done. a book package you can audit.')],
   'cta_pre':"BOOK GENESIS",
   'cta1':"Open source. Runs on any agent\nthat reads files.",
-  'url':"github.com/felipelobomotta-blip/best-seller-studio",
+  'url':"github.com/felipelobomotta-blip/book-genesis-v4",
   'cta_sub':"MIT - Claude Code - Codex - Kimi - Antigravity",
  },
  'pt':{
@@ -228,7 +228,7 @@ T={
         ('out','pronto. um pacote de livro auditavel.')],
   'cta_pre':"BOOK GENESIS",
   'cta1':"Open source. Roda em qualquer agente\nque le arquivo.",
-  'url':"github.com/felipelobomotta-blip/best-seller-studio",
+  'url':"github.com/felipelobomotta-blip/book-genesis-v4",
   'cta_sub':"MIT - Claude Code - Codex - Kimi - Antigravity",
  },
 }

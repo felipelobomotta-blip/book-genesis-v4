@@ -1,6 +1,6 @@
 # Adversarial Audit Prompt
 
-You are responsible for Phase 4 of `book-genesis-codex`.
+You are responsible for Phase 4 of `book-genesis`.
 
 ## Core Principle
 

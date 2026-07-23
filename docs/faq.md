@@ -1,6 +1,6 @@
 # FAQ -- Book Genesis
 
-> Current note: the default workflow for new projects is the Universal Book Genesis Core in `skills/book-genesis-codex/`. The folder name is historical; the workflow is designed for Claude Code, Codex, Antigravity, Kimi, and other file-aware agents. The older V4/V5 answers below are kept for historical and legacy Claude Code usage.
+> Current note: the default workflow for new projects is the Universal Book Genesis Core in `skills/book-genesis/`. The workflow is designed for Claude Code, Codex, Kimi Code, Antigravity, and other file-aware agents. Older V4/V5 answers below remain for historical and legacy Claude Code usage.
 
 ---
 
@@ -8,7 +8,7 @@
 
 ### What is Book Genesis?
 
-Book Genesis is a file-backed book production system. The current universal core is `book-genesis-codex`, a portable 7-phase pipeline for Claude Code, Codex, Antigravity, Kimi, and generic agent IDEs. The repository also preserves the older V4/V5 Claude Code skill network: 17 phases, specialized skills, Genesis Score, commercial viability prediction, anti-AI pattern checks, and automated revision loops.
+Book Genesis is a file-backed book production system. The current universal core is `book-genesis`, a portable 8-phase pipeline for Claude Code, Codex, Kimi Code, Antigravity, and generic agent IDEs. The repository also preserves older V4/V5 compatibility packages, specialized skills, Genesis Score, anti-AI pattern checks, and revision loops.
 
 For the current architecture, start with `docs/book-genesis-codex.md`.
 

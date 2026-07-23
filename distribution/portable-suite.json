@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "suite_name": "book-genesis-portable",
+  "canonical_skill": "book-genesis",
+  "agent_registry": "skills/book-bestseller-studio/references/agent-registry.yaml",
+  "skills": [
+    "beta-reader",
+    "book-bestseller-studio",
+    "book-editor",
+    "book-genesis",
+    "book-researcher",
+    "book-swarm-panel",
+    "copy-editing",
+    "editorial-package",
+    "humanizer",
+    "literary-agent-panel",
+    "manuscript-manager",
+    "narrative-foundation",
+    "production-prep",
+    "prose-craft",
+    "series-architect"
+  ],
+  "legacy_skills": [
+    "book-genesis-codex",
+    "book-genesis-full"
+  ],
+  "legacy_claude": {
+    "agents_dir": "agents",
+    "knowledge_dir": "knowledge"
+  },
+  "targets": {
+    "claude": {
+      "home_env": "CLAUDE_CONFIG_DIR",
+      "default_home": ".claude",
+      "skills_dir": "skills"
+    },
+    "codex": {
+      "home_env": "CODEX_HOME",
+      "default_home": ".codex",
+      "skills_dir": "skills"
+    },
+    "kimi": {
+      "home_env": "KIMI_CODE_HOME",
+      "default_home": ".kimi-code",
+      "skills_dir": "skills"
+    },
+    "shared": {
+      "home_env": "",
+      "default_home": ".agents",
+      "skills_dir": "skills"
+    }
+  }
+}

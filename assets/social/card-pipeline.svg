@@ -79,6 +79,6 @@
   <!-- Footer -->
   <line x1="380" y1="950" x2="700" y2="950" stroke="#D4A574" stroke-opacity="0.4" stroke-width="1"/>
   <text x="540" y="990" font-family="Inter, Helvetica, sans-serif" font-size="18" letter-spacing="6" text-anchor="middle" fill="#D4A574">
-    BOOK GENESIS · github.com/felipelobomotta-blip/best-seller-studio
+    BOOK GENESIS · github.com/felipelobomotta-blip/book-genesis-v4
   </text>
 </svg>

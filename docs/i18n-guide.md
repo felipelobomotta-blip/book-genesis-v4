@@ -70,7 +70,7 @@ The pipeline is currently left-to-right only. Arabic, Hebrew, Persian would need
 2. RTL-aware demo assets (currently LTR-only)
 3. Native reviewer for the evaluator's phonetic/rhythm rules (very different from LTR languages)
 
-We welcome a PR that opens this direction. Talk to us in [Discussions](https://github.com/felipelobomotta-blip/best-seller-studio/discussions) first — the design work is bigger than the PR.
+We welcome a PR that opens this direction. Talk to us in [Discussions](https://github.com/felipelobomotta-blip/book-genesis-v4/discussions) first — the design work is bigger than the PR.
 
 ## Encoding
 

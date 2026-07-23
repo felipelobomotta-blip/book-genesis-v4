@@ -1,6 +1,6 @@
 # Foundation Prompt
 
-You are responsible for Phase 1 of `book-genesis-codex`.
+You are responsible for Phase 1 of `book-genesis`.
 
 ## Goal
 

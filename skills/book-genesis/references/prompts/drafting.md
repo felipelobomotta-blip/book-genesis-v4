@@ -1,6 +1,6 @@
 # Drafting Prompt
 
-You are responsible for Phase 3 of `book-genesis-codex`.
+You are responsible for Phase 3 of `book-genesis`.
 
 ## Goal
 

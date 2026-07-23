@@ -1,9 +1,11 @@
-# Genesis Score Codex
+# Genesis Score
 
 ## Purpose
 
-Genesis Score Codex is the single scoring contract for `book-genesis-codex`.
+Genesis Score is the single scoring contract for `book-genesis`.
 It must be used consistently across prompts, adapters, examples, reports, and manual review.
+
+Read and follow `evaluator-protocol.md` before scoring. Record the evaluation independence grade in every final report.
 
 The score exists to answer one question:
 
@@ -97,6 +99,7 @@ The score uses 10 dimensions:
 - any score above 8.0 must cite evidence
 - any score above 9.0 must cite multiple pieces of evidence
 - evidence must be textual, structural, or reader-impact based
+- raw blind evaluators do not see writer self-reports, desired pass scores, or previous numeric scores; scorekeeper sees frozen reports and applies thresholds afterward
 - internal scores carry a default +0.8 inflation risk; report calibrated scores when comparing against an external-facing threshold
 - do not let market clarity compensate for literary weakness when the stated goal is critical literary quality
 
@@ -149,5 +152,7 @@ The final report saved to `artifacts/09-genesis-score-codex.md` must include:
 - Weighted Average
 - Literary Barrier Score and threshold when active
 - Gate Verdict
+- Evaluation Independence Grade
+- evaluator disagreement and confidence
 - weakest dimension
 - required intervention or approval note

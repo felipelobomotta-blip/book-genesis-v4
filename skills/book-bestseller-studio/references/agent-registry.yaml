@@ -166,7 +166,7 @@ swarm_director:
 
 adversarial_auditor:
   label: "Adversarial Auditor"
-  skill: "skills/book-genesis-codex/SKILL.md"
+  skill: "skills/book-genesis/SKILL.md"
   mission: "Attack premise, structure, opening, pacing, coherence, market promise, AI texture, and score inflation before final score."
   timing: "Mandatory Phase 4."
   score_floor: "Blocks final score until audit complete"
@@ -180,6 +180,26 @@ adversarial_auditor:
     - "Final score cannot run before this output exists."
     - "Weakest dimension named."
     - "Score inflation risks documented."
+
+blind_literary_critic:
+  label: "Blind Literary Critic"
+  skill: "skills/book-genesis/references/scoring/evaluator-protocol.md"
+  mission: "Read the declared manuscript coverage in a fresh context, score every literary lens with cited evidence, and produce a raw report without seeing pass thresholds, prior scores, writer self-reports, or revision rationale."
+  timing: "Phase 5 before revision and after every revision iteration. Dispatch at least three independent instances."
+  score_floor: "withheld"
+  blind: "true"
+  inputs:
+    - "manuscript/chapters"
+    - "artifacts/03-characters.md"
+    - "artifacts/04-theme.md"
+    - "artifacts/05-outline.md"
+  outputs:
+    - "evaluations/blind"
+  gates:
+    - "Coverage is declared as full manuscript or named sample."
+    - "Every score above 8.0 cites textual or structural evidence."
+    - "Strongest and weakest passages are located."
+    - "No target threshold or prior score appears in evaluator inputs."
 
 revision_editor:
   label: "Revision Editor"
@@ -203,12 +223,13 @@ revision_editor:
 
 scorekeeper:
   label: "Scorekeeper"
-  skill: "skills/book-genesis-codex/references/scoring/genesis-score-codex.md"
-  mission: "Score only after audit/revision, enforce 8.5+ target as calibrated threshold, and block publication claims when floor dimensions fail."
-  timing: "Phase 5 Final Score."
+  skill: "skills/book-genesis/references/scoring/genesis-score-codex.md"
+  mission: "Aggregate frozen blind-evaluator reports after audit/revision, apply calibration and the 8.5+ target, and block publication claims when floor dimensions or evaluation integrity fail."
+  timing: "Phase 6 Final Score."
   score_floor: "8.5 calibrated floor target"
   inputs:
     - "artifacts/08-adversarial-audit.md"
+    - "evaluations/blind"
     - "evaluations/book-swarm"
     - "manuscript/chapters"
   outputs:
@@ -222,7 +243,7 @@ package_strategist:
   label: "Package Strategist"
   skill: "skills/editorial-package/SKILL.md"
   mission: "Build logline, cover copy, synopsis, query/pitch, cover brief, metadata angle, and viral hooks that match the manuscript instead of overpromising."
-  timing: "Phase 6 and package-reaction loops."
+  timing: "Phase 7 and package-reaction loops."
   score_floor: "8.5 package/market target"
   inputs:
     - "artifacts/09-genesis-score-codex.md"

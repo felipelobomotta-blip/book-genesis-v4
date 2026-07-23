@@ -1,6 +1,6 @@
 # Architecture -- Book Genesis V4
 
-> Current note: the default workflow for new projects is now the Universal Book Genesis Core (`skills/book-genesis-codex/`). This document remains the legacy V4/V5 architecture reference. See `docs/book-genesis-codex.md` for the portable agent pipeline.
+> Current note: the default workflow for new projects is now the Universal Book Genesis Core (`skills/book-genesis/`). This document remains the legacy V4/V5 architecture reference. See `docs/book-genesis-codex.md` for the portable agent pipeline.
 
 Book Genesis V4.1 is a 17-phase pipeline (with sub-phases) that transforms a one-sentence idea into a commercially viable, publishable manuscript. V4 was built from the ground up after a 5-genre stress test (SYSTEM-ANALYSIS.md) identified 9 structural problems in V2. V4.1 adds 8 skills, doubles the phase count, and introduces fully autonomous execution via `/book-auto`. Every architectural change traces back to a specific failure in the system analysis or lessons learned from real manuscript iterations.
 

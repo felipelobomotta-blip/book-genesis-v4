@@ -35,7 +35,7 @@ If you're building with AI agents — whether books, code, or operations — the
 Repo and proof layer in the comments.`;
 
 const commentBody = `Link to the repository with the pipeline, cover gallery, case studies, and portable skill:
-https://github.com/felipelobomotta-blip/best-seller-studio
+https://github.com/felipelobomotta-blip/book-genesis-v4
 
 Key docs:
 - docs/book-gallery.md (10+ project proof)

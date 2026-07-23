@@ -17,6 +17,11 @@ from runner.filesystem import (  # noqa: E402
     scaffold_project,
     validate_project,
 )
+from runner.distribution import (  # noqa: E402
+    install_suite,
+    supported_targets,
+    validate_suite,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -57,12 +62,57 @@ def build_parser() -> argparse.ArgumentParser:
     demo_parser.add_argument("--adapter", default="codex")
     demo_parser.add_argument("--model", default="gpt-5.5")
 
+    install_parser = subparsers.add_parser("install", help="Install portable skills for an agent runtime")
+    install_parser.add_argument("target", choices=supported_targets())
+    install_parser.add_argument("--dest", default=None, help="Override the runtime skills directory")
+    install_parser.add_argument("--include-legacy", action="store_true")
+    install_parser.add_argument("--force", action="store_true", help="Back up and replace conflicting skills")
+    install_parser.add_argument("--dry-run", action="store_true")
+
+    subparsers.add_parser("verify-suite", help="Validate portable skills, agent registry, and phase contracts")
+
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "verify-suite":
+        result = validate_suite()
+        for warning in result["warnings"]:
+            print(f"warning: {warning}")
+        if not result["ok"]:
+            print("Portable suite validation failed")
+            for error in result["errors"]:
+                print(error)
+            return 1
+        print("Portable suite validation ok")
+        return 0
+
+    if args.command == "install":
+        result = install_suite(
+            args.target,
+            destination=args.dest,
+            include_legacy=args.include_legacy,
+            force=args.force,
+            dry_run=args.dry_run,
+        )
+        for action in result["actions"]:
+            print(f"{action['action']}: {action['skill']}")
+        for action in result.get("legacy_actions", []):
+            print(f"{action['action']}: {action['component']}/{action['name']}")
+        if not result["ok"]:
+            print("Installation failed")
+            for error in result["errors"]:
+                print(error)
+            return 1
+        mode = "Dry run" if result.get("dry_run") else "Installed"
+        print(f"{mode} for {args.target}: {result['destination']}")
+        if result.get("backup"):
+            print(f"Backup: {result['backup']}")
+        return 0
+
     target = Path(args.path)
 
     if args.command == "init":

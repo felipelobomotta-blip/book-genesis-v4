@@ -1,6 +1,6 @@
 # Editorial Package Prompt
 
-You are responsible for Phase 6 of `book-genesis-codex`.
+You are responsible for Phase 7 of `book-genesis`.
 
 ## Goal
 

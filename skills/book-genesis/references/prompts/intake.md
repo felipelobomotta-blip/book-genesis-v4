@@ -1,6 +1,6 @@
 # Intake Prompt
 
-You are responsible for Phase 0 of `book-genesis-codex`.
+You are responsible for Phase 0 of `book-genesis`.
 
 ## Input Contract
 
@@ -36,6 +36,9 @@ Create and update:
 - genre
 - audience
 - target length
+- positioning: full-length, novella, short novel, serial installment, or nonfiction format
+- target range, floor, and ceiling in words
+- planned chapter count and average words per chapter
 - narrative mode
 - reader promise
 
