@@ -1,6 +1,6 @@
 # Literary Barrier Revision Loop
 
-You are responsible for Phase 5 of `book-genesis-codex`.
+You are responsible for coordinating Phase 5 of `book-genesis`.
 
 ## Goal
 
@@ -13,18 +13,32 @@ This phase exists because a manuscript can pass ordinary structure checks and st
 Read:
 
 - `artifacts/08-adversarial-audit.md`
+- `references/scoring/evaluator-protocol.md`
 - all manuscript chapters
 - foundation and architecture artifacts
 - the latest Genesis Score report if one already exists
 - prior files in `evaluations/` if this is not the first loop
 
+## Role Separation
+
+Do not let one context both revise and approve its own revision when isolated subagents are available.
+
+1. At least three `blind_literary_critic` instances score and create evidence-backed reports.
+2. A revision editor receives the tickets and manuscript, but not the desired numeric result.
+3. A fresh blind evaluator rescores the revised manuscript.
+4. The orchestrator applies calibration and the threshold after evaluator reports exist.
+
+When the runtime cannot isolate contexts, mark Evaluation Independence Grade `C`. Grade C can guide revision but cannot support a strong independent-quality claim.
+
 ## Calibration Rule
 
 Internal evaluation is biased upward. Before deciding that the book cleared the barrier:
 
-1. score each critical lens from 1 to 10
-2. subtract 0.8 from each lens score unless there is external human critique attached in `evaluations/`
-3. use the lowest calibrated lens as the Literary Barrier Score
+1. collect separate evaluator reports before revealing the target threshold
+2. use the median score for each lens
+3. subtract 0.8 from each lens median unless external human critique is attached in `evaluations/`
+4. use the lowest calibrated lens as the Literary Barrier Score
+5. send disagreements of 1.5 points or more to another evaluator instead of averaging them away
 
 Do not claim the threshold was reached unless the calibrated floor is above the target.
 
@@ -44,18 +58,19 @@ Score and diagnose these lenses separately:
 
 Repeat until the calibrated Literary Barrier Score is above target or a blocker is explicit:
 
-1. Identify the lowest scoring lens.
-2. Name the exact passages or structural zones causing the ceiling.
-3. Choose the smallest revision class that can raise the ceiling:
+1. Prepare `blind_literary_critic` packet and dispatch at least three fresh instances under `evaluator-protocol.md`.
+2. Identify the lowest scoring lens from evidence-backed reports.
+3. Name the exact passages or structural zones causing the ceiling.
+4. Write `evaluations/revision-plan.md` using the smallest revision class that can raise the ceiling:
    - structural revision
    - connective revision
    - character deepening
    - voice recalibration
    - line edit
    - cut or merge
-4. Revise the manuscript files directly.
-5. Save a revision note in `evaluations/literary-barrier-loop.md`.
-6. Rescore all lenses, including any lens that might have been damaged.
+5. Dispatch a revision editor to revise the manuscript files directly.
+6. Save a revision note in `evaluations/literary-barrier-loop.md`.
+7. Dispatch a fresh blind evaluator to rescore all lenses, including any lens that might have been damaged.
 
 ## Revision Rules
 
@@ -82,6 +97,7 @@ Stop with blocker only when:
 - the manuscript lacks enough draft material to evaluate
 - the next improvement requires author decision, lived material, external research, or human critique
 - further revision would be speculative churn
+- five revision iterations failed to clear the calibrated floor, unless user explicitly raises the limit
 
 ## Output
 
@@ -95,3 +111,11 @@ Save or update `evaluations/literary-barrier-loop.md` with:
 - passages changed
 - strengths preserved
 - current verdict: `CONTINUE`, `APPROVED`, or `BLOCKED`
+
+Save or update `evaluations/revision-plan.md` with:
+
+- ticket identifiers and severity
+- cited passages or structural zones
+- assigned revision class
+- strengths that must be preserved
+- acceptance evidence required from the next evaluator

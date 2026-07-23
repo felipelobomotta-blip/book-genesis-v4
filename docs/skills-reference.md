@@ -1,6 +1,6 @@
 # Skills Reference -- Book Genesis V4
 
-> Current note: this is the legacy V4/V5 skill reference. For the portable agent-agnostic core, see `skills/book-genesis-codex/` and `docs/book-genesis-codex.md`.
+> Current note: this is the legacy V4/V5 skill reference. For the portable agent-agnostic core, see `skills/book-genesis/` and `docs/book-genesis-codex.md`.
 
 Market-level add-ons live beside the universal core. The current public positioning is the **Book Genesis Bestseller Skills Suite**:
 

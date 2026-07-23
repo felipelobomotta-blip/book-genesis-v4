@@ -2,15 +2,15 @@
 
 # Best Seller Studio
 
-**Turn any idea into a publication-ready book. Fully autonomous. Quality-gated.**
+**Turn any idea into a rigorously built and audited book. Agent-native. Quality-gated.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-[![Claude Code](https://img.shields.io/badge/Runs%20on-Claude%20Code-blueviolet?style=flat-square)](https://claude.ai/code)
-[![Quality Gate](https://img.shields.io/badge/Quality%20Gate-8.5%2F10%20enforced-brightgreen?style=flat-square)](#the-quality-gates)
-[![Agents](https://img.shields.io/badge/8%20specialized%20agents-orange?style=flat-square)](#the-agents)
+[![Runtimes](https://img.shields.io/badge/Runs%20on-Claude%20%7C%20Codex%20%7C%20Kimi-blueviolet?style=flat-square)](docs/portability.md)
+[![Quality Gate](https://img.shields.io/badge/Quality%20Gate-calibrated%208.5%2B-brightgreen?style=flat-square)](#quality-gates)
+[![Skills](https://img.shields.io/badge/15%20portable%20skills-orange?style=flat-square)](distribution/portable-suite.json)
 [![Books Shipped](https://img.shields.io/badge/Books%20Shipped-10%2B-blue?style=flat-square)](#proof)
 
-https://github.com/felipelobomotta-blip/best-seller-studio/raw/master/video-demo/out/demo.mp4
+https://github.com/felipelobomotta-blip/book-genesis-v4/raw/master/video-demo/out/demo.mp4
 
 </div>
 
@@ -20,9 +20,9 @@ You have an idea. Maybe it came to you in the shower. Maybe it's been in a note 
 
 Type it in. That's it. The system takes over.
 
-8 AI agents run in sequence — researching your genre, forging a premise with a structural irony engine, writing every chapter, scoring each one independently, revising anything below the quality gate, and packaging the result for publication.
+Portable specialist roles research the genre, forge the premise, build the manuscript, audit it adversarially, revise weak dimensions, score with isolated evaluators, and package the result.
 
-You approve 3 times. Everything else is automatic.
+Important decisions, assumptions, gates, and blockers stay visible in project files. Runtime handles model execution; Book Genesis handles editorial protocol.
 
 **No writing experience required. No prompt engineering. No creative blocks.**
 
@@ -30,39 +30,49 @@ You approve 3 times. Everything else is automatic.
 
 ## Quick start
 
-**Step 1 — Get Claude Code**
+**Step 1 — Choose a runtime**
 
-Download it free at [claude.ai/code](https://claude.ai/code). It runs in your terminal.
+Use Claude Code, Codex, Kimi Code, or another file-aware agent. Install Python 3.10+ for the deterministic runner and installer.
 
-**Step 2 — Install the agents**
+**Step 2 — Clone and verify**
+
+```bash
+git clone https://github.com/felipelobomotta-blip/book-genesis-v4.git
+cd book-genesis-v4
+python runner/cli.py verify-suite
+```
+
+**Step 3 — Install the same portable suite into your runtime**
 
 ```bash
 # macOS / Linux
-git clone https://github.com/felipelobomotta-blip/best-seller-studio
-cp best-seller-studio/agents/*.md ~/.claude/agents/
+bash install.sh claude   # or: codex, kimi, shared
 ```
 
 ```powershell
 # Windows (PowerShell)
-git clone https://github.com/felipelobomotta-blip/best-seller-studio
-Copy-Item best-seller-studio\agents\*.md $env:USERPROFILE\.claude\agents\
+.\install.ps1 -Target codex   # or: claude, kimi, shared
 ```
 
-**Step 3 — Give it an idea**
+The installer performs a conflict check. It never overwrites a modified skill unless you pass `--force` or `-Force`; forced replacements are backed up first.
 
-Open Claude Code and type:
+**Step 4 — Give it an idea**
+
+Invoke `/book-genesis` in Claude Code, use `/skill:book-genesis` in Kimi Code, or ask Codex to use the installed `book-genesis` skill. Then type:
 
 ```
 I have an idea for a book: [your idea here]
 ```
 
-That's it. The `book-orchestrator` agent takes over and runs the whole pipeline.
+The orchestrator creates durable project files and dispatches specialist roles through runtime-native subagents when available.
 
 ---
 
 ## What happens when you run it
 
-Here's the exact sequence:
+Default portable sequence: Intake → Foundation → Architecture → Drafting → Adversarial Audit → Literary Barrier Revision Loop → Final Score → Editorial Package.
+
+The diagram below documents the legacy V4 multi-agent route retained for compatibility:
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -149,11 +159,20 @@ Here's the exact sequence:
 
 ---
 
-## The quality gates
+## Quality gates
 
 This is what makes Best Seller Studio different from just asking ChatGPT to write a book.
 
-### Gate 1 — Premise must score 8.0+ before a word is written
+Default portable profile enforces:
+
+1. Product and commercial-length contract before drafting.
+2. Mandatory adversarial audit before scoring.
+3. Literary Barrier revision with blind evaluator reports and recorded independence grade.
+4. Final floor score, weighted score, evidence, and package gates.
+
+The detailed chapter-by-chapter gates below document legacy V4 behavior. Install them only with `--include-legacy`.
+
+### Legacy Gate 1 — Premise must score 8.0+ before a word is written
 
 Every bestseller has the same structural DNA: a contradiction that generates conflict automatically. Gone Girl works because the "perfect marriage" premise immediately contradicts itself. Breaking Bad works because "chemistry teacher becomes drug lord" is a contradiction that escalates by its own logic.
 
@@ -172,7 +191,7 @@ The Premise Forge scores your idea across 6 dimensions:
 
 Your raw idea is always Variant 1 (scored honestly as a baseline). If it already hits 8.0, it wins — the system doesn't forge for the sake of forging. Variants 2–5 are alternatives using different irony engines.
 
-### Gate 2 — Every chapter scores 8.5+ before the manuscript advances
+### Legacy Gate 2 — Every chapter scores 8.5+ before the manuscript advances
 
 The evaluator that scores your chapters is a **separate agent that never wrote any of them**. No self-grading.
 
@@ -186,7 +205,7 @@ Chapters between the hard floor and the 8.5 target enter the **Polish Loop**: th
 
 Anti-inflation protection: each cycle can only add +0.5 maximum. You can't shortcut the gate.
 
-### Gate 3 — All chapters 8.5+ AND CVI-Launch ≥ 9.0
+### Legacy Gate 3 — All chapters 8.5+ AND CVI-Launch ≥ 9.0
 
 CVI-Launch is our best-seller potential proxy. 9.0 is "breakout potential, Gone Girl tier" — the manuscript has a word-of-mouth mechanism built in structurally, not just good prose.
 
@@ -194,7 +213,9 @@ The manuscript only reaches packaging when both gates pass.
 
 ---
 
-## The agents
+## Portable roles and legacy Claude agents
+
+Portable profile owns specialist behavior through [`agent-registry.yaml`](skills/book-bestseller-studio/references/agent-registry.yaml) and fresh agent packets. Table below documents native Claude V4 profiles retained for compatibility.
 
 | Agent | Role |
 |---|---|
@@ -226,34 +247,34 @@ These ideas were run through the pipeline:
 
 ---
 
-## Cost
+## Inference and cost
 
-Using **Claude Sonnet 4.6** (recommended):
+Book Genesis does not host a model and does not call a provider API. The selected runtime owns inference, authentication, quotas, and billing.
 
-| What | Cost |
-|---|---|
-| Full book, 20 chapters | ~$20–30 |
-| Per chapter (avg 1.5 polish cycles) | ~$1.00–1.50 |
-| Setup phases (research + forge + foundation) | ~$1.50 |
+- Claude Code uses the user's Claude account or configured provider.
+- Codex uses the user's Codex/OpenAI environment.
+- Kimi Code uses the user's Kimi membership or configured provider.
+- Local or shared Agent Skills directories remain possible through the `shared` target.
 
-Claude Code runs on your Anthropic account via OAuth — no separate API key needed.
+No central Book Genesis API bill exists. Runtime limits still apply.
 
 ---
 
 ## Requirements
 
-- [Claude Code](https://claude.ai/code) — log in with your Anthropic account (OAuth). No API key needed.
-- ~30 minutes unattended runtime per book (the pipeline runs autonomously)
+- Python 3.10+
+- Claude Code, Codex, Kimi Code, or another agent that can read and write project files
+- enough runtime quota and context for long-form work
 
 ---
 
 ## Honest caveats
 
-**What the system guarantees:** The manuscript scores 8.5+ on the internal quality gate before leaving the pipeline. No chapter ships silently below target. Every gate failure is surfaced to you explicitly.
+**What the system guarantees:** The workflow does not approve a manuscript unless required artifacts and documented quality gates pass. Failures and degraded evaluator independence are surfaced explicitly. The mechanical runner validates contracts, not literary truth.
 
 **What the system does not guarantee:** A literal bestseller. Cover design, marketing, timing, and luck are outside the manuscript and outside this system. The quality gate attacks the word-of-mouth mechanism (retellability + CVI) because that's the lever we actually control.
 
-**About the 8.5 score:** It's an internally-calibrated ruler based on comps that hit bestseller lists — not a certified external measurement. It's the best proxy we can build before a real audience reads the book.
+**About the 8.5 score:** It is an internal editorial ruler, not certified external measurement. Final reports record evaluator isolation Grade A, B, or C; Grade C cannot support an independent-quality claim.
 
 ---
 

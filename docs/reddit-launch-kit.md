@@ -66,12 +66,12 @@ The repo now includes:
 - portability notes for Claude Code, Codex, Antigravity, Kimi, and generic agents
 
 Repo:
-https://github.com/felipelobomotta-blip/best-seller-studio
+https://github.com/felipelobomotta-blip/book-genesis-v4
 
 The most interesting files:
 
 - docs/book-gallery.md
-- skills/book-genesis-codex/
+- skills/book-genesis/
 - docs/portability.md
 - docs/book-genesis-codex.md
 - SHOWCASE.md
@@ -123,7 +123,7 @@ So I rebuilt it as a smaller universal core:
 
 ```text
 Repo:
-https://github.com/felipelobomotta-blip/best-seller-studio
+https://github.com/felipelobomotta-blip/book-genesis-v4
 
 The proof layer:
 10+ book projects, covers/cover concepts, case studies, scoring artifacts, and the portable skill.
@@ -145,11 +145,11 @@ The surprising part was that the larger version of the system - 17 phases, 19 sk
 The current version is smaller and agent-agnostic: durable project files, one active phase prompt at a time, adversarial audit before scoring, and an editorial package after the manuscript survives critique. It can run in Claude Code, Codex, Antigravity, Kimi, or any agent that can read and write files.
 
 Repo:
-https://github.com/felipelobomotta-blip/best-seller-studio
+https://github.com/felipelobomotta-blip/book-genesis-v4
 
 Useful files:
 - docs/book-gallery.md
-- skills/book-genesis-codex/
+- skills/book-genesis/
 - docs/portability.md
 - docs/book-genesis-codex.md
 - SHOWCASE.md

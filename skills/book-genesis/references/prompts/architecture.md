@@ -1,6 +1,6 @@
 # Architecture Prompt
 
-You are responsible for Phase 2 of `book-genesis-codex`.
+You are responsible for Phase 2 of `book-genesis`.
 
 ## Goal
 

@@ -7,7 +7,7 @@ const tweets = [
   `So I rebuilt it as a smaller, file-backed core:\n\n• One active phase at a time\n• PROJECT_STATE.yaml + ASSUMPTIONS.md\n• Draft first, judge after\n• Adversarial audit before final score\n• Editorial package only after the manuscript survives critique`,
   `The result:\n\n10+ book projects with covers, case studies, scoring artifacts, and outlines.\n\nThe manuscripts are private.\n\nThe pipeline, proof layer, and portable skill are open-source.`,
   `It runs as a file-backed workflow in:\n\n• Claude Code\n• Codex\n• Antigravity\n• Kimi\n• Any agent that can read/write project files\n\nNo lock-in. No proprietary format. Just durable state files and phase prompts.`,
-  `If you're building long-form agent workflows, I'm curious:\n\nHave you seen the same tradeoff — more live constraints improving consistency but hurting voice?\n\nRepo + proof gallery:\nhttps://github.com/felipelobomotta-blip/best-seller-studio`,
+  `If you're building long-form agent workflows, I'm curious:\n\nHave you seen the same tradeoff — more live constraints improving consistency but hurting voice?\n\nRepo + proof gallery:\nhttps://github.com/felipelobomotta-blip/book-genesis-v4`,
   `The lesson that took me 10 books to learn:\n\nA pipeline beats a prompt.\n\nBut a smaller pipeline beats a bigger one.`
 ];
 

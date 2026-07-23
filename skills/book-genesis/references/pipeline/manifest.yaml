@@ -47,6 +47,8 @@ phase_4_adversarial_audit:
 phase_5_literary_barrier_loop:
   label: "Phase 5: Literary Barrier Revision Loop"
   prompt: "references/prompts/literary-barrier-loop.md"
+  references:
+    - "references/scoring/evaluator-protocol.md"
   gate: "literary_barrier_loop"
   outputs:
     - "evaluations/literary-barrier-loop.md"
@@ -56,6 +58,8 @@ phase_5_literary_barrier_loop:
 phase_6_final_score:
   label: "Phase 6: Final Score"
   prompt: "references/scoring/genesis-score-codex.md"
+  references:
+    - "references/scoring/evaluator-protocol.md"
   gate: "final_score"
   outputs:
     - "artifacts/09-genesis-score-codex.md"

@@ -7,10 +7,10 @@ This repository contains Book Genesis, an agent-agnostic book-production workflo
 When asked to create, plan, draft, audit, score, revise, or package a book, use the Universal Book Genesis Core unless the user explicitly asks for legacy V4/V5:
 
 ```text
-skills/book-genesis-codex/SKILL.md
+skills/book-genesis/SKILL.md
 ```
 
-The folder name is historical. Treat this as the current universal pipeline for Claude Code, Codex, Antigravity, Kimi, and other file-aware agents.
+Treat this as the current universal pipeline for Claude Code, Codex, Kimi Code, Antigravity, and other file-aware agents. `skills/book-genesis-codex/` remains only as a compatibility package.
 
 When the user asks for bestseller-level, market-ready, agent/editor-ready, or launch-ready work, layer the market umbrella skill on top of the universal core:
 
@@ -27,7 +27,7 @@ skills/book-swarm-panel/SKILL.md
 Load the manifest before advancing phases:
 
 ```text
-skills/book-genesis-codex/references/pipeline/manifest.yaml
+skills/book-genesis/references/pipeline/manifest.yaml
 ```
 
 ## Rules
@@ -43,17 +43,17 @@ skills/book-genesis-codex/references/pipeline/manifest.yaml
 
 ## Agent-Specific Notes
 
-- Claude Code can run `/book-genesis-codex` after installing the full skill folder.
+- Claude Code can run `/book-genesis` after installing the portable suite.
 - Codex can use this repo directly through `AGENTS.md` and the skill folder.
 - Antigravity can use this file as the repo-level playbook.
-- Kimi can use the full skill folder or the active phase prompt plus project state files.
+- Kimi Code can run `/skill:book-genesis` after installing the portable suite.
 - The optional local runner in `runner/cli.py` can scaffold projects and prepare phase packets, but it does not call a model or write literary output.
 
-## Legacy Commands
+## Commands
 
-- `/book-genesis`: V5 Craft Mode legacy orchestrator.
+- `/book-genesis`: canonical portable pipeline.
 - `/book-genesis-full`: full legacy production pipeline.
-- `/book-genesis-codex`: current portable command name kept for compatibility.
+- `/book-genesis-codex`: historical portable command kept for compatibility.
 
 ## Public Documentation
 

@@ -5,7 +5,7 @@ Goal: position Book Genesis as an open-source AI book studio for global builders
 Repo:
 
 ```text
-https://github.com/felipelobomotta-blip/best-seller-studio
+https://github.com/felipelobomotta-blip/book-genesis-v4
 ```
 
 Core positioning:
@@ -118,7 +118,7 @@ Post 6:
 
 ```text
 Repo:
-https://github.com/felipelobomotta-blip/best-seller-studio
+https://github.com/felipelobomotta-blip/book-genesis-v4
 
 MIT licensed. Feedback welcome from writers, agent builders, publishing-tech teams, and long-form workflow nerds.
 ```

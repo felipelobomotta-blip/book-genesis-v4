@@ -22,7 +22,7 @@ python runner/cli.py prepare-agent-packet my-book prose_writer
 my-book/work/current-phase.md
 ```
 
-That file contains the phase label, gate, required outputs, and the full active phase prompt from `skills/book-genesis-codex/references/`.
+That file contains the phase label, gate, required outputs, and the full active phase prompt from `skills/book-genesis/references/`.
 
 `prepare-swarm` writes:
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Safe portable installer for Claude Code, Codex, Kimi Code, and shared Agent Skills directories.
+- Distribution manifest, dependency validation, checksums, dry-run, conflict detection, and recoverable forced replacement.
+- Independent evaluator protocol with Grade A/B/C isolation reporting.
+- Blind literary critic role that receives no target score or previous evaluation.
+- Commercial-length fields and Literary Barrier phase in canonical runner state.
+- Portable-suite and installer regression tests.
+
+### Changed
+
+- `skills/book-genesis/` is now canonical universal core.
+- Platform-specific agents consume shared packets and gates instead of redefining editorial logic.
+- Public links now point to `felipelobomotta-blip/book-genesis-v4`.
+- Legacy V4 skills, plus native Claude agents/knowledge, remain opt-in through `--include-legacy`.
+
 ## V4.2 — 2026-06-10
 
 ### Added: Premise Forge (Phase 1.5)

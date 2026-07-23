@@ -8,7 +8,7 @@ from typing import Dict, List
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SKILL_ROOT = REPO_ROOT / "skills" / "book-genesis-codex"
+SKILL_ROOT = REPO_ROOT / "skills" / "book-genesis"
 MANIFEST_PATH = SKILL_ROOT / "references" / "pipeline" / "manifest.yaml"
 
 
@@ -17,6 +17,7 @@ class Phase:
     key: str
     label: str
     prompt: str
+    references: List[str]
     gate: str
     outputs: List[str]
     next: str
@@ -33,6 +34,7 @@ class AgentSpec:
     outputs: List[str]
     gates: List[str]
     score_floor: str
+    blind: bool
 
 
 ARTIFACT_HEADINGS: Dict[str, str] = {
@@ -60,6 +62,7 @@ def load_manifest() -> List[Phase]:
             key=key,
             label=str(entry.get("label", "")),
             prompt=str(entry.get("prompt", "")),
+            references=list(entry.get("references", [])),
             gate=str(entry.get("gate", "")),
             outputs=list(entry.get("outputs", [])),
             next=str(entry.get("next", "")),
@@ -81,6 +84,7 @@ def load_agent_registry() -> List[AgentSpec]:
             outputs=list(entry.get("outputs", [])),
             gates=list(entry.get("gates", [])),
             score_floor=str(entry.get("score_floor", "")),
+            blind=str(entry.get("blind", "false")).lower() == "true",
         )
         for key, entry in entries.items()
     ]
@@ -170,6 +174,13 @@ def prepare_phase(target: Path) -> Path:
     prompt_path = SKILL_ROOT / phase.prompt
     prompt_text = prompt_path.read_text(encoding="utf-8")
     output_list = "\n".join(f"- {item}" for item in phase.outputs)
+    reference_sections = []
+    for reference in phase.references:
+        reference_path = SKILL_ROOT / reference
+        reference_text = reference_path.read_text(encoding="utf-8").rstrip()
+        reference_sections.append(f"## Required Reference: {reference}\n\n{reference_text}\n")
+    references_text = "\n".join(reference_sections)
+    reference_appendix = f"\n{references_text}" if references_text else ""
 
     packet = (
         f"# Current Phase\n\n"
@@ -179,6 +190,7 @@ def prepare_phase(target: Path) -> Path:
         f"- Required outputs:\n{output_list}\n\n"
         f"## Phase Prompt\n\n"
         f"{prompt_text.rstrip()}\n"
+        f"{reference_appendix}"
     )
 
     work_dir = target / "work"
@@ -281,6 +293,19 @@ def prepare_agent_packet(target: Path, agent_key: str) -> Path:
     input_lines = _path_status_lines(target, agent.inputs)
     output_lines = "\n".join(f"- `{item}`" for item in agent.outputs) or "- No required outputs listed."
     gate_lines = "\n".join(f"- {item}" for item in agent.gates) or "- No gates listed."
+    score_floor = "withheld from blind evaluator" if agent.blind else (agent.score_floor or "project default")
+    blind_rule = (
+        "- Blind evaluation: yes\n"
+        "- Do not request or infer the target score, previous scores, writer self-report, or revision rationale.\n"
+        if agent.blind
+        else "- Blind evaluation: no\n"
+    )
+    operating_rule = (
+        "Produce a raw evidence-backed evaluation only. Do not approve readiness, apply a pass threshold, or edit the manuscript."
+        if agent.blind
+        else "Produce durable files only. Do not claim market-ready, viral-ready, or 8.5+ readiness unless every listed gate passes with evidence. "
+        "When a gate fails, write blockers and revision tickets instead of inflating scores."
+    )
 
     skill_path = REPO_ROOT / agent.skill
     skill_excerpt = ""
@@ -293,8 +318,9 @@ def prepare_agent_packet(target: Path, agent_key: str) -> Path:
         f"# Agent Packet: {agent.label}\n\n"
         f"- Agent key: `{agent.key}`\n"
         f"- Timing: {agent.timing}\n"
-        f"- Score floor: {agent.score_floor or 'project default'}\n"
+        f"- Score floor: {score_floor}\n"
         f"- Skill: `{agent.skill}`\n\n"
+        f"{blind_rule}\n"
         "## Mission\n\n"
         f"{agent.mission}\n\n"
         "## Input Status\n\n"
@@ -304,8 +330,7 @@ def prepare_agent_packet(target: Path, agent_key: str) -> Path:
         "## Gates\n\n"
         f"{gate_lines}\n\n"
         "## Operating Rule\n\n"
-        "Produce durable files only. Do not claim market-ready, viral-ready, or 8.5+ readiness unless every listed gate passes with evidence. "
-        "When a gate fails, write blockers and revision tickets instead of inflating scores.\n\n"
+        f"{operating_rule}\n\n"
         "## Skill Prompt\n\n"
         f"{skill_excerpt}\n"
     )
@@ -493,7 +518,10 @@ def _project_state_template(
         f"  language: \"{_escape_yaml(language)}\"\n"
         "  genre: \"\"\n"
         "  audience: \"\"\n"
-        "  target_length: \"\"\n\n"
+        "  positioning: \"\"\n"
+        "  target_range_words: \"\"\n"
+        "  target_floor_words: 0\n"
+        "  target_ceiling_words: 0\n\n"
         "runtime:\n"
         f"  adapter: \"{_escape_yaml(adapter)}\"\n"
         f"  model_family: \"{_infer_family(model_name)}\"\n"
@@ -507,7 +535,11 @@ def _project_state_template(
         "  generated: []\n\n"
         "manuscript:\n"
         "  chapter_count: 0\n"
+        "  chapter_count_planned: 0\n"
+        "  average_words_per_chapter_planned: 0\n"
+        "  word_count_actual: 0\n"
         "  completed_chapters: []\n"
+        "  length_gate: \"pending\"\n"
         "  status: \"not_started\"\n\n"
         "gates:\n"
         f"{gates}\n"

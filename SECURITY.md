@@ -17,7 +17,7 @@ Best Seller Studio uses `MAJOR.MINOR` versioning. Security fixes are applied to 
 
 If you find a vulnerability — in the agent prompts, the install scripts, the file I/O contracts, or anywhere else in the pipeline that could compromise a user's system, credentials, or work — please report it privately:
 
-1. Open a private [GitHub Security Advisory](https://github.com/felipelobomotta-blip/best-seller-studio/security/advisories/new), OR
+1. Open a private [GitHub Security Advisory](https://github.com/felipelobomotta-blip/book-genesis-v4/security/advisories/new), OR
 2. Message the maintainer through the email on the GitHub profile.
 
 **What to include:**

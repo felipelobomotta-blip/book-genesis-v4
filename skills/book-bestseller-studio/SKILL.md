@@ -5,7 +5,7 @@ description: Use when the user wants a complete book-production system aimed at 
 
 # Book Bestseller Studio
 
-This is the umbrella skill for creating a complete book at market level. It does not replace `book-genesis` or the portable `book-genesis-codex` core; it coordinates the specialist skills and adds commercial gates.
+This is the umbrella skill for creating a complete book at market level. It does not replace canonical `book-genesis`; it coordinates specialist skills and adds commercial gates.
 
 Use this when the user says things like:
 
@@ -29,6 +29,8 @@ Use this when the user says things like:
 - `editorial-package`: logline, back-cover copy, synopsis, query letter, cover brief.
 - `launch-strategy`: go-to-market, offer, launch calendar, proof-driven positioning.
 - `content-strategy`: audience-building and content plan around the book.
+
+`launch-strategy` and `content-strategy` are optional external companions. Do not block manuscript completion when they are not installed.
 
 ## Operating Rule
 
@@ -61,6 +63,17 @@ Default project layout:
 8. Run `literary-agent-panel` and/or `book-swarm-panel` again after revision.
 9. Run `editorial-package` only after manuscript passes product gates.
 10. Run `launch-strategy` and `content-strategy` for public-launch readiness.
+
+## Portable Agent Dispatch
+
+Read `references/dispatch.md` and use `references/agent-registry.yaml` for specialist ownership. Prepare packets with `python runner/cli.py prepare-agent-packet <project> <agent>` when the runner is available.
+
+- Claude Code: dispatch a custom or general-purpose subagent with the packet.
+- Codex: dispatch an isolated subagent with the packet when available.
+- Kimi Code: dispatch a fresh built-in subagent with the packet.
+- No subagents: run roles sequentially, mark evaluation independence as degraded, and never call self-scoring independent.
+
+Editorial rules remain identical across adapters. Platform-specific agent files may select tools or models, but must not redefine gates or scoring.
 
 ## Commercial Gates
 

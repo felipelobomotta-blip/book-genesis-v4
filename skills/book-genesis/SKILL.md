@@ -3,9 +3,9 @@ name: book-genesis
 description: Use when the user wants to create, plan, draft, evaluate, revise, package, or run a complete AI-assisted book pipeline. Book Genesis turns a one-line idea into a book project with intake, foundation, architecture, drafting, adversarial audit, Genesis Score, and editorial package artifacts.
 ---
 
-# Book Genesis
+# Book Genesis Universal Core
 
-Book Genesis is Felipe's local book-production pipeline adapted for Codex. It uses the newer `book-genesis-codex` core as the canonical workflow.
+Book Genesis is Felipe's portable book-production pipeline for Claude Code, Codex, Kimi Code, and other file-aware agents. This folder is the canonical workflow. Platform adapters install the same files without changing editorial rules.
 
 Use this skill for:
 
@@ -70,6 +70,8 @@ Read only the prompt for the active phase:
 - Final Score: `references/scoring/genesis-score-codex.md`
 - Editorial Package: `references/prompts/editorial-package.md`
 
+Before any independent or final score, read `references/scoring/evaluator-protocol.md` and record the achieved independence grade.
+
 `references/prompts/orchestrator.md` contains the portable orchestration rules.
 
 ## Operating Loop
@@ -99,6 +101,7 @@ Read only the prompt for the active phase:
 
 - Prefer fewer constraints during drafting; evaluate and repair afterward.
 - Separate drafting, audit, scoring, and editorial judgment in the workflow.
+- Keep writer, revision editor, and final evaluator in isolated contexts when the runtime supports subagents.
 - Use the Genesis Score floor principle: the book is only as strong as its weakest major dimension.
 - Treat internal literary scores as inflated until calibrated. Apply the score calibration rules in the scoring reference before claiming a threshold was reached.
 - Do not optimize prose to satisfy rubrics while drafting. The writer writes; the critic and editor operate after text exists.
@@ -114,5 +117,5 @@ Use these only when relevant and already available:
 - `copy-editing` for prose-level cleanup
 - `book-swarm-panel` for MiroFish-style simulated reader swarms, niche-risk scouting, public-opinion tests, heatmaps, interviews, and revision tickets
 - `humanizer` for less synthetic phrasing
-- `launch-strategy` or `content-strategy` for go-to-market assets
+- `launch-strategy` or `content-strategy` for go-to-market assets when separately installed
 - `imagegen` or cover-specific workflows for cover ideation

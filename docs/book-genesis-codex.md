@@ -2,10 +2,10 @@
 
 The Universal Book Genesis Core is the portable, reduced-pressure version of Book Genesis. It works in Claude Code, Codex, Antigravity, Kimi, and other agents that can read files and maintain project state.
 
-The implementation lives at:
+Canonical implementation lives at:
 
 ```text
-skills/book-genesis-codex/
+skills/book-genesis/
   SKILL.md
   agents/openai.yaml
   references/
@@ -13,6 +13,7 @@ skills/book-genesis-codex/
     pipeline/phases.md
     prompts/
     scoring/genesis-score-codex.md
+    scoring/evaluator-protocol.md
     legacy-v4-book-genesis.md
 ```
 
@@ -28,7 +29,7 @@ tests/
 
 The runner scaffolds projects, prepares phase packets, validates required files, advances gates, prepares optional Book Swarm Panel/MiroFish bridge folders, and writes specialist agent packets for Book Bestseller Studio. It does not call a model or generate real prose.
 
-The folder name `book-genesis-codex` is historical and preserved so existing commands and installs keep working. The product positioning is broader: **Book Genesis is a universal book pipeline for AI agents.**
+The folder `book-genesis-codex` is historical and preserved for compatibility. New installs use `book-genesis`: **Book Genesis is a universal book pipeline for AI agents.**
 
 ## Why It Exists
 
@@ -48,10 +49,10 @@ The universal core makes a different bet:
 
 | Agent | Status | Notes |
 |-------|--------|-------|
-| Claude Code | Native skill | Install the full folder and run `/book-genesis-codex` |
-| Codex | Native repo workflow | Use `AGENTS.md` or the skill folder directly |
+| Claude Code | Native skill | Install portable suite and run `/book-genesis` |
+| Codex | Native skill/repo workflow | Install portable suite or use `AGENTS.md` |
 | Antigravity | Agent playbook | Open the repo and follow `AGENTS.md` |
-| Kimi | File-backed workflow | Provide the skill folder or paste the active phase contract |
+| Kimi Code | Native Agent Skill | Install portable suite and run `/skill:book-genesis` |
 | Generic coding agents | Portable | Must read files, write artifacts, and update state |
 
 ## Canonical Pipeline
@@ -63,8 +64,9 @@ The universal core makes a different bet:
 | 2 | Architecture | outline, tension map, opening strategy |
 | 3 | Drafting | chapter files in `manuscript/chapters/` |
 | 4 | Adversarial Audit | structural criticism before score |
-| 5 | Final Score | Genesis Score report |
-| 6 | Editorial Package | logline, blurb, synopsis, cover brief, query strategy |
+| 5 | Literary Barrier Revision Loop | isolated evaluation and evidence-backed revision |
+| 6 | Final Score | Genesis Score report |
+| 7 | Editorial Package | logline, blurb, synopsis, cover brief, query strategy |
 
 Default project tree:
 
@@ -100,6 +102,7 @@ Approval requires:
 - no dimension below 8.0
 - evidence for every dimension
 - adversarial audit not marked `MAJOR REWRITE`
+- evaluator independence grade recorded
 
 The floor principle remains the most important rule: the manuscript is only as strong as its weakest major dimension.
 
@@ -131,13 +134,13 @@ The remaining risk is not technical. It is editorial: any AI writing system can 
 For Claude Code:
 
 ```text
-/book-genesis-codex pt-br "memoir sobre burnout e reconstrucao profissional"
+/book-genesis pt-br "memoir sobre burnout e reconstrucao profissional"
 ```
 
 For Codex, Antigravity, Kimi, or another repo-aware agent:
 
 ```text
-Use Book Genesis. Read AGENTS.md, then run the manifest in skills/book-genesis-codex/references/pipeline/manifest.yaml one phase at a time.
+Use Book Genesis. Read AGENTS.md, then run the manifest in skills/book-genesis/references/pipeline/manifest.yaml one phase at a time.
 ```
 
 For a local mechanical check:
@@ -161,4 +164,4 @@ For packaging only:
 Use Book Genesis to create the editorial package from this approved manuscript.
 ```
 
-Use the old `/book-genesis` or `/book-genesis-full` only when you explicitly want the legacy Claude Code pipeline.
+Use `/book-genesis-full` or the compatibility `/book-genesis-codex` only when you explicitly want an older package.
