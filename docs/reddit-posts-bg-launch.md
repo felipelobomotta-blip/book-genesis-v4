@@ -2,7 +2,7 @@
 
 Four English launch posts with different angles. Stagger them. Do not cross-post identical copy.
 
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 
 ## 1. r/ClaudeAI
 
@@ -29,7 +29,7 @@ Everything persists to files: `PROJECT_STATE.yaml`, `ASSUMPTIONS.md`, `manuscrip
 
 The goal is not "AI writes a book in one shot." The goal is a repeatable production loop with evidence, gates, and revision pressure.
 
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 
 Curious how others are structuring multi-skill Claude Code workflows.
 
@@ -57,7 +57,7 @@ Book Genesis is the open-source version. It is markdown-first and agent-agnostic
 
 The repo includes public case studies, cover concepts, scoring docs, skills, runner scripts, and launch materials. Manuscripts stay private.
 
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 
 Feedback welcome, especially from builders making long-form agent workflows.
 
@@ -84,7 +84,7 @@ Key design choice: adversarial audit happens before the quantitative score. The 
 
 The current repo also includes a 9-skill book studio: researcher, editor, agent panel, reader swarm, copyeditor, humanizer, and editorial packager.
 
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 
 Interested in whether this pattern generalizes beyond fiction: courses, reports, research briefs, grants, game narratives, etc.
 
@@ -106,7 +106,7 @@ Book Genesis is the open-source version of that workflow. It runs as a file-back
 
 It also includes a simulated agent/editor panel and reader-swarm diagnostics, but those are decision aids, not replacements for human readers.
 
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 
 I would especially appreciate feedback from writers on what the audit phase should catch before a score is allowed.
 

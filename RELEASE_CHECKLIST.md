@@ -39,7 +39,7 @@ Steps to cut a new version of Best Seller Studio. Copy this into a GitHub Issue 
 ## Post-release
 
 - [ ] Pin release on GitHub
-- [ ] Post release announcement in [Discussions](https://github.com/felipelobomotta-blip/best-seller-studio/discussions/categories/announcements) (if category exists)
+- [ ] Post release announcement in [Discussions](https://github.com/felipelobomotta-blip/book-genesis-v4/discussions/categories/announcements) (if category exists)
 - [ ] Update social preview banner if the version number is on it
 - [ ] Twitter/X + LinkedIn post linking the release
 - [ ] Show HN or Reddit r/ClaudeAI post if the release is significant (major features, not patch)

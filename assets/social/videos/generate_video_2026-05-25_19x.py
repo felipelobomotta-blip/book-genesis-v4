@@ -101,7 +101,7 @@ T = {
   'lesson3':"wins from decomposition.",
   'cta_pre':"BOOK GENESIS",
   'cta1':"Open source. Runs on any agent\nthat reads files.",
-  'url':"github.com/felipelobomotta-blip/best-seller-studio",
+  'url':"github.com/felipelobomotta-blip/book-genesis-v4",
   'cta_sub':"MIT · Claude Code · Codex · Kimi · Antigravity",
  },
  'pt':{
@@ -125,7 +125,7 @@ T = {
   'lesson3':"ganha com decomposição.",
   'cta_pre':"BOOK GENESIS",
   'cta1':"Open source. Roda em qualquer agente\nque lê arquivo.",
-  'url':"github.com/felipelobomotta-blip/best-seller-studio",
+  'url':"github.com/felipelobomotta-blip/book-genesis-v4",
   'cta_sub':"MIT · Claude Code · Codex · Kimi · Antigravity",
  }
 }

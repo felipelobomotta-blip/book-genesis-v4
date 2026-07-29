@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Book Genesis — "How to use it" step-by-step tutorial (terminal screencast style)
-# Real commands + real 8-phase pipeline from the repo (best-seller-studio).
+# Real commands + real 8-phase pipeline from the repo (book-genesis-v4).
 import sys, math, subprocess
 from PIL import Image, ImageDraw, ImageFont
 
@@ -149,7 +149,7 @@ T={
   'i_top':"HOW TO USE",'i_big':"Book Genesis",
   'i_sub':"From an idea to a scored, market-ready book — step by step.",
   's1_lab':"STEP 1 · INSTALL",'s1_cap':"Clone the repo and install the skills.",
-  's1':[('cmd','git clone .../best-seller-studio'),('cmd','cd best-seller-studio'),
+  's1':[('cmd','git clone .../book-genesis-v4'),('cmd','cd book-genesis-v4'),
         ('cmd','./install.ps1'),('ok','9 book-studio skills installed')],
   's2_lab':"STEP 2 · POINT ANY AGENT",'s2_cap':"Works in any agent that reads files.",
   's2':[('comment','# Claude Code / Codex / Antigravity / Kimi'),
@@ -185,14 +185,14 @@ T={
         ('out','done. a book package you can audit.')],
   'cta_pre':"BOOK GENESIS",
   'cta1':"Open source. Runs on any agent\nthat reads files.",
-  'url':"github.com/felipelobomotta-blip/best-seller-studio",
+  'url':"github.com/felipelobomotta-blip/book-genesis-v4",
   'cta_sub':"MIT - Claude Code - Codex - Kimi - Antigravity",
  },
  'pt':{
   'i_top':"COMO USAR",'i_big':"Book Genesis",
   'i_sub':"De uma ideia a um livro pontuado e pronto pro mercado — passo a passo.",
   's1_lab':"PASSO 1 · INSTALAR",'s1_cap':"Clone o repo e instale as skills.",
-  's1':[('cmd','git clone .../best-seller-studio'),('cmd','cd best-seller-studio'),
+  's1':[('cmd','git clone .../book-genesis-v4'),('cmd','cd book-genesis-v4'),
         ('cmd','./install.ps1'),('ok','9 skills de estudio instaladas')],
   's2_lab':"PASSO 2 · APONTE QUALQUER AGENTE",'s2_cap':"Funciona em qualquer agente que le arquivo.",
   's2':[('comment','# Claude Code / Codex / Antigravity / Kimi'),
@@ -228,7 +228,7 @@ T={
         ('out','pronto. um pacote de livro auditavel.')],
   'cta_pre':"BOOK GENESIS",
   'cta1':"Open source. Roda em qualquer agente\nque le arquivo.",
-  'url':"github.com/felipelobomotta-blip/best-seller-studio",
+  'url':"github.com/felipelobomotta-blip/book-genesis-v4",
   'cta_sub':"MIT - Claude Code - Codex - Kimi - Antigravity",
  },
 }
