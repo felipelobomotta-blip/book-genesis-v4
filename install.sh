@@ -32,17 +32,22 @@ fi
 
 mkdir -p "$TARGET_SKILLS" "$TARGET_KNOWLEDGE" "$TARGET_AGENTS"
 
+# Skills live at skills/<name>/ AND in grouping folders like skills/optional/<name>/.
+# Discover SKILL.md at any depth so nested groups are not silently skipped.
+# skills/deprecated/ is intentionally excluded — those are superseded by agents/.
 count=0
-for skill_dir in "$SKILLS_DIR"/*/; do
+while IFS= read -r skill_file; do
+  skill_dir=$(dirname "$skill_file")
   skill_name=$(basename "$skill_dir")
-  if [ -f "$skill_dir/SKILL.md" ]; then
-    rm -rf "$TARGET_SKILLS/$skill_name"
-    mkdir -p "$TARGET_SKILLS/$skill_name"
-    cp -R "$skill_dir". "$TARGET_SKILLS/$skill_name/"
-    echo -e "  ${GREEN}+${NC} $skill_name"
-    count=$((count + 1))
-  fi
-done
+  case "$skill_dir" in
+    */deprecated/*) continue ;;
+  esac
+  rm -rf "$TARGET_SKILLS/$skill_name"
+  mkdir -p "$TARGET_SKILLS/$skill_name"
+  cp -R "$skill_dir/." "$TARGET_SKILLS/$skill_name/"
+  echo -e "  ${GREEN}+${NC} $skill_name"
+  count=$((count + 1))
+done < <(find "$SKILLS_DIR" -maxdepth 3 -name SKILL.md -type f | sort)
 
 kb_count=0
 if [ -d "$KNOWLEDGE_DIR" ]; then
@@ -65,6 +70,28 @@ if [ -d "$AGENTS_DIR" ]; then
     fi
   done
 fi
+
+# Verify every subagent_type the orchestrator dispatches is actually installed.
+# A missing one stalls the pipeline mid-run, so fail loudly here instead.
+PIPELINE_AGENTS="book-researcher book-architect entity-tracker continuity-guardian book-writer dialogue-polish hook-craft book-disruptor book-evaluator book-editor book-packager"
+missing=""
+for agent in $PIPELINE_AGENTS; do
+  if [ ! -f "$TARGET_AGENTS/$agent.md" ]; then
+    missing="$missing $agent"
+  fi
+done
+
+echo ""
+if [ -n "$missing" ]; then
+  echo -e "${RED}Pipeline incomplete.${NC} The orchestrator dispatches agents that are not installed:"
+  for agent in $missing; do
+    echo -e "  ${RED}-${NC} $agent"
+  done
+  echo ""
+  echo "The book-orchestrator will stall when it reaches one of these."
+  exit 1
+fi
+echo -e "${GREEN}Pipeline verified.${NC} All 11 orchestrator agents resolve."
 
 echo ""
 echo -e "${GREEN}Done.${NC} $count skills + $agent_count agents + $kb_count knowledge files installed"

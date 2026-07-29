@@ -2,7 +2,7 @@
 
 Public launch kit for the English-first GitHub repo.
 
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 
 Primary positioning:
 
@@ -112,7 +112,7 @@ The repo ships the system:
 
 ```text
 Repo:
-https://github.com/felipelobomotta-blip/best-seller-studio
+https://github.com/felipelobomotta-blip/book-genesis-v4
 
 MIT licensed. Built for writers and builders who want a production loop, not a pile of drafts.
 ```
@@ -138,7 +138,7 @@ research, book architecture, developmental editing, literary-agent panel, MiroFi
 It works with repo-aware agents like Claude Code, Codex, Kimi, and Antigravity because it is just files: markdown instructions, scoring contracts, manifests, and durable project state.
 
 Repo:
-https://github.com/felipelobomotta-blip/best-seller-studio
+https://github.com/felipelobomotta-blip/book-genesis-v4
 ```
 
 ## Hacker News

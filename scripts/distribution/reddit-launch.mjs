@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 
-const repoUrl = "https://github.com/felipelobomotta-blip/best-seller-studio";
+const repoUrl = "https://github.com/felipelobomotta-blip/book-genesis-v4";
 const subreddit = "ClaudeAI";
 const postTitle = `I stress-tested AI agents on 10+ book projects in under 30 days. The 19-skill version was worse.`;
 

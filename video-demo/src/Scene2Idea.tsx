@@ -134,7 +134,7 @@ export const Scene2Idea: React.FC = () => {
             transition: 'opacity 0.3s',
           }}
         >
-          best-seller-studio --run pipeline
+          book-genesis-v4 --run pipeline
         </div>
       </div>
     </div>

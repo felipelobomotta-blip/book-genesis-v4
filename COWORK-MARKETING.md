@@ -2,7 +2,7 @@
 
 Use this file to seed a cowork session on claude.ai. Paste the relevant section as the task prompt.
 
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 
 ---
 
@@ -101,7 +101,7 @@ The repo ships the system:
 
 **Tweet 7 (CTA):**
 ```
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 
 MIT licensed. Built for writers and builders who want a production loop, not a pile of drafts.
 ```
@@ -133,7 +133,7 @@ It works with repo-aware agents like Claude Code, Codex, Kimi, and Antigravity b
 The surprising lesson: the 17-skill version made the books worse. The writer started optimizing for the evaluator. Smaller loop, file-backed state, draft-before-score — that is what worked.
 
 Repo:
-https://github.com/felipelobomotta-blip/best-seller-studio
+https://github.com/felipelobomotta-blip/book-genesis-v4
 ```
 
 ---
@@ -165,7 +165,7 @@ The surprising lesson: the 17-phase, 19-skill version caught more errors but mad
 
 Proof layer: 10 book projects in under 30 days — memoir, fantasy, thriller, sci-fi, LitRPG, cozy mystery, dark academia. The manuscripts are private; the repo publishes the pipeline, covers/cover concepts, case studies, scoring artifacts, outlines and synopses.
 
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 
 Curious if others building long-form agent workflows have hit the same tradeoff: more orchestration improves consistency but too many live constraints hurt voice.
 ```
@@ -201,7 +201,7 @@ The repo includes public case studies, cover concepts, scoring docs, 9 skills, r
 
 The biggest lesson: fewer live agents worked better. More skills caught more errors, but also made the writing defensive.
 
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 
 Feedback welcome, especially from builders making long-form agent workflows.
 ```
@@ -252,7 +252,7 @@ Before posting anywhere, complete these steps:
 **Product name:** Best Seller Studio
 **Tagline:** Open-source AI book pipeline for Claude Code, Codex, and Kimi
 **Categories:** AI, Open Source, Developer Tools
-**URL:** https://github.com/felipelobomotta-blip/best-seller-studio
+**URL:** https://github.com/felipelobomotta-blip/book-genesis-v4
 
 **Gallery assets (prepare before launch):**
 - `assets/demo.gif` — demo animado
@@ -284,7 +284,7 @@ AI Workflow Builder | Creator of Best Seller Studio, an open-source AI book pipe
 ```
 
 **GitHub profile pin:**
-Pin `best-seller-studio` with description:
+Pin `book-genesis-v4` with description:
 ```
 Open-source AI book studio: 9 markdown skills for drafting, editing, reader swarms, agent panels, and editorial packages.
 ```

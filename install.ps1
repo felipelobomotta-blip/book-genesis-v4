@@ -31,20 +31,22 @@ foreach ($dir in @($TargetSkills, $TargetKnowledge, $TargetAgents)) {
     }
 }
 
+# Skills live at skills\<name>\ AND in grouping folders like skills\optional\<name>\.
+# Discover SKILL.md at any depth so nested groups are not silently skipped.
+# skills\deprecated\ is intentionally excluded - those are superseded by agents\.
 $count = 0
-Get-ChildItem -Path $SkillsDir -Directory | ForEach-Object {
-    $skillName = $_.Name
-    $skillFile = Join-Path $_.FullName "SKILL.md"
-    if (Test-Path $skillFile) {
-        $destDir = Join-Path $TargetSkills $skillName
-        if (Test-Path $destDir) {
-            Remove-Item -LiteralPath $destDir -Recurse -Force
-        }
-        New-Item -ItemType Directory -Path $destDir -Force | Out-Null
-        Copy-Item -Path (Join-Path $_.FullName "*") -Destination $destDir -Recurse -Force
-        Write-Host "  + $skillName" -ForegroundColor Green
-        $count++
+Get-ChildItem -Path $SkillsDir -Filter "SKILL.md" -File -Recurse | ForEach-Object {
+    $skillDir = $_.Directory
+    if ($skillDir.FullName -match '[\\/]deprecated[\\/]') { return }
+    $skillName = $skillDir.Name
+    $destDir = Join-Path $TargetSkills $skillName
+    if (Test-Path $destDir) {
+        Remove-Item -LiteralPath $destDir -Recurse -Force
     }
+    New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+    Copy-Item -Path (Join-Path $skillDir.FullName "*") -Destination $destDir -Recurse -Force
+    Write-Host "  + $skillName" -ForegroundColor Green
+    $count++
 }
 
 $kbCount = 0
@@ -64,6 +66,25 @@ if (Test-Path $AgentsDir) {
         $agentCount++
     }
 }
+
+# Verify every subagent_type the orchestrator dispatches is actually installed.
+# A missing one stalls the pipeline mid-run, so fail loudly here instead.
+$PipelineAgents = @(
+    "book-researcher", "book-architect", "entity-tracker", "continuity-guardian",
+    "book-writer", "dialogue-polish", "hook-craft", "book-disruptor",
+    "book-evaluator", "book-editor", "book-packager"
+)
+$missing = $PipelineAgents | Where-Object { -not (Test-Path (Join-Path $TargetAgents "$_.md")) }
+
+Write-Host ""
+if ($missing) {
+    Write-Host "Pipeline incomplete. The orchestrator dispatches agents that are not installed:" -ForegroundColor Red
+    $missing | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
+    Write-Host ""
+    Write-Host "The book-orchestrator will stall when it reaches one of these."
+    exit 1
+}
+Write-Host "Pipeline verified. All 11 orchestrator agents resolve." -ForegroundColor Green
 
 Write-Host ""
 Write-Host "Done. $count skills + $agentCount agents + $kbCount knowledge files installed" -ForegroundColor Green

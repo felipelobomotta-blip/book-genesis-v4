@@ -235,7 +235,7 @@ The counterintuitive part: the larger 17-phase / 19-skill version made the books
 
 The current version is smaller, agent-agnostic, and works with Claude Code, Codex, Antigravity, Kimi, or any agent that can read/write files.
 
-Repo: https://github.com/felipelobomotta-blip/best-seller-studio
+Repo: https://github.com/felipelobomotta-blip/book-genesis-v4
 Proof layer: docs/book-gallery.md
 ```
 

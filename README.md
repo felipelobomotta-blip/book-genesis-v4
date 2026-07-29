@@ -7,10 +7,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Runs%20on-Claude%20Code-blueviolet?style=flat-square)](https://claude.ai/code)
 [![Quality Gate](https://img.shields.io/badge/Quality%20Gate-8.5%2F10%20enforced-brightgreen?style=flat-square)](#the-quality-gates)
-[![Agents](https://img.shields.io/badge/8%20specialized%20agents-orange?style=flat-square)](#the-agents)
+[![Agents](https://img.shields.io/badge/11%20specialized%20agents-orange?style=flat-square)](#the-agents)
 [![Books Shipped](https://img.shields.io/badge/Books%20Shipped-10%2B-blue?style=flat-square)](#proof)
 
-https://github.com/felipelobomotta-blip/best-seller-studio/raw/master/video-demo/out/demo.mp4
+https://github.com/felipelobomotta-blip/book-genesis-v4/raw/master/video-demo/out/demo.mp4
 
 </div>
 
@@ -20,7 +20,7 @@ You have an idea. Maybe it came to you in the shower. Maybe it's been in a note 
 
 Type it in. That's it. The system takes over.
 
-8 AI agents run in sequence — researching your genre, forging a premise with a structural irony engine, writing every chapter, scoring each one independently, revising anything below the quality gate, and packaging the result for publication.
+11 AI agents run in sequence — researching your genre, forging a premise with a structural irony engine, writing every chapter, scoring each one independently, revising anything below the quality gate, and packaging the result for publication.
 
 You approve 3 times. Everything else is automatic.
 
@@ -38,15 +38,17 @@ Download it free at [claude.ai/code](https://claude.ai/code). It runs in your te
 
 ```bash
 # macOS / Linux
-git clone https://github.com/felipelobomotta-blip/best-seller-studio
-cp best-seller-studio/agents/*.md ~/.claude/agents/
+git clone https://github.com/felipelobomotta-blip/book-genesis-v4
+cd book-genesis-v4 && ./install.sh
 ```
 
 ```powershell
 # Windows (PowerShell)
-git clone https://github.com/felipelobomotta-blip/best-seller-studio
-Copy-Item best-seller-studio\agents\*.md $env:USERPROFILE\.claude\agents\
+git clone https://github.com/felipelobomotta-blip/book-genesis-v4
+cd book-genesis-v4; .\install.ps1
 ```
+
+The installer copies all 11 pipeline agents, the skills, and the bestseller knowledge base, then verifies every agent the orchestrator dispatches actually resolves. If it prints `Pipeline verified`, you're ready. Copying `agents/*.md` by hand is not enough — the pipeline also reads `~/.claude/knowledge/`.
 
 **Step 3 — Give it an idea**
 
@@ -201,7 +203,11 @@ The manuscript only reaches packaging when both gates pass.
 | `book-orchestrator` | Pipeline manager. Dispatches everyone, enforces all gates, routes checkpoints to you. |
 | `book-researcher` | Market reader. Finds what readers actually hate about existing books in your genre — that gap is your premise's foundation. |
 | `book-architect` | Premise forger + structural architect. Dispatched 3 times: forge mode → foundation → voice DNA. |
+| `entity-tracker` | Canonical state keeper. Maintains `ENTITY_STATE.yaml` — every character, location, object, timeline event, plot thread, and who knows what when. |
+| `continuity-guardian` | Continuity auditor. Runs once on the outline and once on the full manuscript. Flags timeline, knowledge, and plot-thread violations with severity — never rewrites. |
 | `book-writer` | Chapter writer. Has the 8.5 bar as design targets, not afterthoughts. |
+| `dialogue-polish` | Dialogue-only pass. Runs the cover-the-name test until every character is identifiable by voice alone. Never touches narrative prose. |
+| `hook-craft` | Chapter openings and endings. Scores the first and last lines, rewrites only those 3–5 sentences when they fall below the genre floor. |
 | `book-evaluator` | Independent critic. Never writes — only judges. Runs the full 4-reader simulation and anti-AI scan. |
 | `book-editor` | Surgical editor. Given a work order from the evaluator, touches only the failing dimensions. Never disrupts what's working. |
 | `book-disruptor` | Chaos agent. Runs between writer and evaluator to break AI predictability — injects unexpected details and authentic human noise. |

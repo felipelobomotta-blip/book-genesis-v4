@@ -11,7 +11,7 @@ The current version is smaller and agent-agnostic: durable project files, one ac
 It runs in Claude Code, Codex, Antigravity, Kimi, or any agent that can read and write files. No proprietary format, no lock-in.
 
 Repo:
-https://github.com/felipelobomotta-blip/best-seller-studio
+https://github.com/felipelobomotta-blip/book-genesis-v4
 
 Useful files:
 - docs/book-gallery.md (10-book proof gallery)
@@ -76,7 +76,7 @@ await titleInput.fill(postTitle);
 
 // Fill URL
 const urlInput = page.locator('input[name="url"]');
-await urlInput.fill("https://github.com/felipelobomotta-blip/best-seller-studio");
+await urlInput.fill("https://github.com/felipelobomotta-blip/book-genesis-v4");
 
 // HN text area (may not be visible if URL is filled)
 const textInput = page.locator('textarea[name="text"]');
