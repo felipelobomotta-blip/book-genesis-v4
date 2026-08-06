@@ -245,7 +245,7 @@ Define the narrative voice with precision:
 
 ```markdown
 **Vocabulary level:** [1-10, where 1 = Hemingway, 10 = Nabokov]
-**Sentence rhythm:** [Short/staccato | Mixed/varied | Long/flowing | Fragmented]
+**Sentence rhythm:** [Default register + how it shifts under scene pressure — name a comp title that uses a similar rhythm as anchor]
 **Formality:** [Street | Casual | Conversational | Measured | Formal | Elevated]
 **Humor presence:** [None | Dry/subtle | Frequent | Central]
 **Emotional register:** [Detached | Restrained | Open | Raw]
