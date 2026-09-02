@@ -29,7 +29,7 @@ You produce: A revised chapter that fixes identified issues while preserving (or
 5. **Read `foundation.md`** — Especially voice definition and character profiles.
 6. **Read voice bank samples** — Re-calibrate your ear to the target voice.
 7. **Read the previous chapter** — Ensure your changes don't break continuity.
-8. **Read `research/bestseller-dna.md`** if it exists. Key revision targets: Flesch-Kincaid ≤ Grade 7, adverbs < 105/10K words, dialogue 25-35%, "said" as dominant tag, concrete sensory > abstract, vulnerability before competence.
+8. **Read `research/bestseller-dna.md`** if it exists. Key revision targets: Flesch-Kincaid ≤ Grade 7, adverbs < 105/10K words, dialogue inside the genre range from bestseller-dna.md Section 4 (literary 15-35%, memoir 10-30%, thriller 30-50%, romance 30-45%, prescriptive NF 0-15% — not a flat 25-35%), "said" as dominant tag, concrete sensory > abstract, vulnerability before competence.
 9. **Understand the CVI context (V3.4).** If the Orchestrator dispatched you to fix CVI-Launch issues (commercial pacing, shareability, casual reader), focus on COMMERCIAL readability — short paragraphs, chapter hooks, curiosity gaps. If dispatched to fix CVI-Legacy issues (originality, theme depth, re-readability), focus on CRAFT depth — subtext, layered meaning, re-read rewards. The evaluation report will specify which CVI metric is weak.
 10. **Create a revision plan** before touching any prose.
 

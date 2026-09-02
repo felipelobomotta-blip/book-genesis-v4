@@ -318,23 +318,3 @@ A huge Thank You 🙏 to everyone who contributes!
 
 [![Contributors](https://contrib.rocks/image?repo=felipelobomotta-blip/book-genesis-v4)](https://github.com/felipelobomotta-blip/book-genesis-v4/graphs/contributors)
 
-## Community
-
-- Questions? Start a [Discussion](https://github.com/felipelobomotta-blip/book-genesis-v4/discussions)
-- Found a bug? [Open an issue](https://github.com/felipelobomotta-blip/book-genesis-v4/issues)
-- Want to contribute? Check [`good first issue`](https://github.com/felipelobomotta-blip/book-genesis-v4/labels/good%20first%20issue) and [`CONTRIBUTING.md`](CONTRIBUTING.md)
-- First-time contributors welcome — happy to pair on the first PR
-
-[![Star History Chart](https://api.star-history.com/svg?repos=felipelobomotta-blip/book-genesis-v4&type=Date)](https://star-history.com/#felipelobomotta-blip/book-genesis-v4&Date)
-
-## Documentation
-
-| Document | Description |
-|---|---|
-| [Architecture](docs/book-genesis-codex.md) | Multi-agent pipeline overview |
-| [Portability](docs/portability.md) | Agent-agnostic design notes |
-| [Showcase](SHOWCASE.md) | 10+ books shipped, case breakdowns |
-| [Contributing](CONTRIBUTING.md) | How to contribute |
-| [Security](SECURITY.md) | Security policy |
-| [Code of Conduct](CODE_OF_CONDUCT.md) | Community standards |
-| [Changelog](CHANGELOG.md) | Version history |

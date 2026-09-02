@@ -307,6 +307,7 @@ Create `outline.md` with this structure for each chapter:
 **Emotional anchor:** [The image/moment the reader should remember tomorrow]
 **Emotional surprise:** [Where the expected emotion is wrong]
 **Opening strategy:** [For Ch.1: which of the 7 strategies. For others: bridge type]
+**Structural approach:** [exactly one of the 8 types the Writer executes — Chronological | Reverse chronological | Fragmented/Mosaic | Essayistic | Spiral | Parallel | Epistolary/Documentary | Stream of consciousness. MUST differ from the previous chapter's. The orchestrator passes this field to the Writer as {approach}; if it is missing, the Writer defaults to graduated reveal and Pacing caps at 7.5.]
 **Key scenes/beats:**
 1. [Scene/beat description — what happens and why it matters]
 2. ...
@@ -338,14 +339,7 @@ Create `outline.md` with this structure for each chapter:
 5. **Opening diversity.** If Chapter 1 opens with voice bomb, Chapter 2 should NOT also be voice-forward. Vary approach.
 6. **Breathing room.** At least 1-2 chapters should have "RECEDES" for theme presence.
 7. **Word count distribution.** No chapter >2x the shortest.
-8. **V3.1: STRUCTURAL DIVERSITY.** No two consecutive chapters should use the same internal structure. Define the structural approach for each chapter explicitly:
-   - Chronological (scene → scene → scene)
-   - Essayistic (argument → evidence → personal)
-   - Fragmented (short sections, white space, lists)
-   - In medias res (start at crisis, explain backward)
-   - Parallel (two timelines, two perspectives)
-   - Single-scene (one long scene, no cuts)
-   - Collage (mixing formats: prose + data + device + dialogue)
+8. **V3.1: STRUCTURAL DIVERSITY.** No two consecutive chapters should use the same internal structure. Fill the outline's **Structural approach** field for every chapter using the SAME 8-type list the Writer executes (Chronological, Reverse chronological, Fragmented/Mosaic, Essayistic, Spiral, Parallel, Epistolary/Documentary, Stream of consciousness). Do not invent a parallel taxonomy here — a name the Writer does not recognize is a silent no-op.
    If 3+ chapters use the same structure, REWRITE the outline until they vary. V3 benchmark showed: same structure repeating = "graduated reveal" penalty, caps Pacing at 7.5.
 9. **V3.1: SECONDARY CHARACTER SCENES.** At least 2 chapters must include a moment where a secondary character's OWN life is visible — not through the protagonist's analysis, but through their behavior. Plan these moments in the outline. V3 benchmark showed: absence of secondary character chaos caps Characters at 7.5.
 10. **V4: ORIGINALITY ENGINEERING (the 8.5 rule).** Originality is decided HERE, not in prose. The quality gate passes nothing below Genesis Floor 8.5, and a brilliantly WRITTEN genre-standard beat still caps Originality at 7.5 — sinking the whole chapter. For every chapter whose central beat is genre-standard (the ally's betrayal, the mentor's death, the false victory, the ticking-clock raid, the interrogation flip), the **Beat subversion** field MUST design a structural surprise: refuse the expected payoff, invert who acts, relocate the weight (quiet where the genre expects loud, deflation where it expects catharsis, competence where it expects panic). If you cannot name the subversion for a beat, redesign the beat. Momentum lives here too: design each chapter's closing so it loads a sharper question than the one it resolved.
