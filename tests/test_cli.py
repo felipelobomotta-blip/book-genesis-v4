@@ -33,6 +33,10 @@ SEPARATOR = "\n=== NEXT ===\n"
 
 
 def run_cli(*args: str) -> subprocess.CompletedProcess:
+    # Isolated from whatever this machine's real ~/.book-genesis/config.yaml holds: a
+    # developer (or CI box) that has already run `setup` must not change what these tests see.
+    env = dict(os.environ)
+    env.setdefault("BOOK_GENESIS_CONFIG", str(Path(tempfile.gettempdir()) / "book-genesis-tests-no-user-config.yaml"))
     return subprocess.run(
         [sys.executable, str(REPO_ROOT / "runner" / "cli.py"), *args],
         capture_output=True,
@@ -40,6 +44,7 @@ def run_cli(*args: str) -> subprocess.CompletedProcess:
         encoding="utf-8",
         errors="replace",
         check=False,
+        env=env,
     )
 
 

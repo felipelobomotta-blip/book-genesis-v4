@@ -83,6 +83,35 @@ class UserConfigTests(unittest.TestCase):
         self.assertIsInstance(setup.adapters["judge"], OpenAICompatibleAdapter)
         self.assertEqual("anthropic/claude-sonnet-4.5", setup.models["writer"])
 
+    def test_reads_a_config_a_real_yaml_editor_wrapped_onto_continuation_lines(self) -> None:
+        # Found on disk 2026-09-03: a config with long scalars folded YAML-style
+        # (indented continuation line, no colon) broke the two-space parser.
+        folded = self.path.parent / "folded.yaml"
+        folded.write_text(
+            "provider_deepseek:\n"
+            "  type: openai\n"
+            "  base_url: https://api.deepseek.com/v1\n"
+            "  api_key: sk-deepseek-in-file\n"
+            "panel_1:\n"
+            "  adapter: deepseek\n"
+            "  model: ''\n"
+            "  persona: the reader who buys this genre and has read the ten books everyone compares\n"
+            "    it to\n"
+            "panel_2:\n"
+            "  adapter: claude\n"
+            "  model: sonnet\n",
+            encoding="utf-8",
+        )
+        config = load_user_config(folded)
+        self.assertEqual(2, len(config.panel))
+        self.assertEqual(
+            "the reader who buys this genre and has read the ten books everyone compares it to",
+            config.panel[0].persona,
+        )
+        # Parsing must resume correctly after the continuation line, not just survive it.
+        self.assertEqual("claude", config.panel[1].adapter)
+        self.assertEqual("sonnet", config.panel[1].model)
+
     def test_missing_file_means_no_user_config(self) -> None:
         self.assertIsNone(load_user_config(self.tempdir / "absent.yaml"))
 

@@ -578,23 +578,34 @@ def _load_simple_yaml_map(path: Path) -> Dict[str, Dict[str, object]]:
     entries: Dict[str, Dict[str, object]] = {}
     current_key = ""
     current_list_key = ""
+    last_scalar_key = ""
+    last_scalar_indent = -1
 
     for line in raw:
         if not line.strip() or line.lstrip().startswith("#"):
             continue
-        if not line.startswith(" "):
+        indent = len(line) - len(line.lstrip(" "))
+        if indent == 0:
             current_key = line.split(":", 1)[0].strip()
             entries[current_key] = {}
             current_list_key = ""
+            last_scalar_key = ""
+            last_scalar_indent = -1
             continue
         if not current_key:
             raise ValueError(f"Value before top-level key in {path}: {line}")
         stripped = line.strip()
+        if last_scalar_key and indent > last_scalar_indent:
+            # A YAML plain-scalar folded onto a continuation line (deeper indent, no key of
+            # its own): a real YAML writer wraps long values this way; join it back with a space.
+            entries[current_key][last_scalar_key] = f"{entries[current_key][last_scalar_key]} {stripped}".strip()  # type: ignore[index]
+            continue
         if stripped.startswith("- "):
             if not current_list_key:
                 raise ValueError(f"List item without list key in {path}: {line}")
             entries[current_key].setdefault(current_list_key, [])
             entries[current_key][current_list_key].append(_unquote(stripped[2:].strip()))  # type: ignore[index]
+            last_scalar_key = ""
             continue
         key, value = stripped.split(":", 1)
         key = key.strip()
@@ -602,9 +613,12 @@ def _load_simple_yaml_map(path: Path) -> Dict[str, Dict[str, object]]:
         if value == "":
             entries[current_key][key] = []
             current_list_key = key
+            last_scalar_key = ""
         else:
             entries[current_key][key] = _unquote(value)
             current_list_key = ""
+            last_scalar_key = key
+            last_scalar_indent = indent
 
     return entries
 
