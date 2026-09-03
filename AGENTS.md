@@ -7,6 +7,8 @@ This repository is Book Genesis: a Python runner that turns one idea into a manu
 When asked to create, plan, draft, judge, revise, or package a book, **use the runner**. Do not orchestrate the phases by hand and do not grade prose yourself.
 
 ```bash
+book-genesis setup                              # once: providers, keys, models (or python runner/cli.py setup)
+book-genesis new --idea "..." --language <code> # the whole pipeline with progress
 python runner/cli.py doctor                     # what is installed; how roles will be assigned
 python runner/cli.py init <project> --idea "..." --language <code>
 python runner/cli.py run-phase <project>        # repeat for intake, foundation, architecture

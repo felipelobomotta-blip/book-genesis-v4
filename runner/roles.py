@@ -17,11 +17,13 @@ from typing import Dict, List, Optional
 from runner.adapters import (
     Adapter,
     AdapterError,
+    AnthropicAdapter,
     ClaudeCliAdapter,
     CodexCliAdapter,
     FakeAdapter,
     GenericCliAdapter,
     ManualAdapter,
+    OpenAICompatibleAdapter,
 )
 from runner.constants import (
     DEFAULT_PERSONAS,
@@ -71,25 +73,31 @@ def available_adapters() -> Dict[str, bool]:
     return found
 
 
-def plan_roles(available: Optional[Dict[str, bool]] = None) -> RolePlan:
+def plan_roles(available: Optional[Dict[str, bool]] = None, user_config=None) -> RolePlan:
     found = dict(available) if available is not None else available_adapters()
+    if user_config is not None:
+        for name in user_config.providers:
+            found[name] = True
     installed = [name for name in KNOWN_CLIS if found.get(name)]
     installed += [name for name, ok in found.items() if ok and name not in KNOWN_CLIS]
     if not installed:
         raise AdapterError(
-            "no model CLI found on PATH. Install Claude Code (`claude`) or the Codex CLI (`codex`) and log in, "
-            "declare another CLI in runner/config/adapters.yaml, or run with the manual adapter (`--manual`)."
+            "no model provider available. Run `book-genesis setup` to connect an API key (OpenRouter, DeepSeek, "
+            "Anthropic, OpenAI, a local server), install Claude Code (`claude`) or the Codex CLI (`codex`), "
+            "declare another CLI in runner/config/adapters.yaml, or run with `--manual`."
         )
     fallback = installed[0]
 
     configured = load_model_map()
+    if user_config is not None:
+        configured.update(user_config.roles)
     roles: Dict[str, RoleModel] = {}
     for role in ROLES:
         wanted = configured.get(role, RoleModel(fallback, ""))
         if found.get(wanted.adapter):
             roles[role] = wanted
         else:
-            roles[role] = RoleModel(fallback, _default_model(fallback, role))
+            roles[role] = RoleModel(fallback, _default_model(fallback, role, user_config))
 
     warnings: List[str] = []
     writer, judge = roles["writer"], roles["judge"]
@@ -107,16 +115,22 @@ def plan_roles(available: Optional[Dict[str, bool]] = None) -> RolePlan:
             )
 
     panel: List[PanelSpec] = []
-    for spec in load_panel():
+    user_panel = user_config is not None and bool(user_config.panel)
+    seats = user_config.panel if user_panel else load_panel()
+    for spec in seats:
         if found.get(spec.adapter):
             panel.append(spec)
         else:
-            model = spec.model if (fallback == "claude" and spec.model) else _default_model(fallback, "judge")
+            model = spec.model if (fallback == "claude" and spec.model) else _default_model(fallback, "judge", user_config)
             panel.append(PanelSpec(fallback, model, spec.persona))
     if not panel:
-        panel = [PanelSpec(fallback, _default_model(fallback, "judge"), persona) for persona in DEFAULT_PERSONAS]
+        panel = [PanelSpec(fallback, _default_model(fallback, "judge", user_config), persona) for persona in DEFAULT_PERSONAS]
     panel = _distinct_personas(panel)
-    if len({spec.adapter for spec in panel}) == 1 and not any(w.startswith("single family") for w in warnings):
+    if (
+        not user_panel
+        and len({spec.adapter for spec in panel}) == 1
+        and not any(w.startswith("single family") for w in warnings)
+    ):
         warnings.append(f"single family: the reader panel runs entirely on `{panel[0].adapter}`.")
 
     return RolePlan(roles=roles, panel=panel, warnings=warnings)
@@ -134,6 +148,7 @@ def build_adapter(
     fake_responses: Optional[List[str]] = None,
     manual_dir: Optional[Path] = None,
     role: str = "",
+    user_config=None,
 ) -> Adapter:
     normalized = name.strip().lower()
     if normalized == "fake":
@@ -146,11 +161,21 @@ def build_adapter(
         if manual_dir is None:
             raise AdapterError("the manual adapter needs a project: run `chapter`, `book`, `run-phase` or `panel` with --manual")
         return ManualAdapter(manual_dir, role or "model")
+    if user_config is not None and normalized in user_config.providers:
+        provider = user_config.providers[normalized]
+        try:
+            key = provider.resolve_key()
+        except AdapterError:
+            key = ""  # reported by `doctor`; the call itself fails with a clear message
+        if provider.type == "anthropic":
+            return AnthropicAdapter(provider.name, provider.base_url, key)
+        return OpenAICompatibleAdapter(provider.name, provider.base_url, key)
     generic = load_generic_adapters()
     if normalized in generic:
         return GenericCliAdapter(normalized, generic[normalized])
     raise AdapterError(
-        f"unknown adapter {name!r}; use claude, codex, manual, fake, or a name declared in runner/config/adapters.yaml"
+        f"unknown adapter {name!r}; use claude, codex, manual, fake, a provider from `book-genesis setup`, "
+        "or a name declared in runner/config/adapters.yaml"
     )
 
 
@@ -159,6 +184,7 @@ def build_role_adapters(
     fake_responses_path: Optional[Path] = None,
     available: Optional[Dict[str, bool]] = None,
     manual_dir: Optional[Path] = None,
+    user_config=None,
 ) -> RunSetup:
     """Adapters and models per role plus the reader panel.
 
@@ -185,12 +211,12 @@ def build_role_adapters(
         )
         return RunSetup(adapters, {role: "" for role in ROLES}, panel, [note])
 
-    plan = plan_roles(available)
+    plan = plan_roles(available, user_config)
     cache: Dict[str, Adapter] = {}
 
     def get(name: str) -> Adapter:
         if name not in cache:
-            cache[name] = build_adapter(name)
+            cache[name] = build_adapter(name, user_config=user_config)
         return cache[name]
 
     adapters = {role: get(role_model.adapter) for role, role_model in plan.roles.items()}
@@ -199,9 +225,14 @@ def build_role_adapters(
     return RunSetup(adapters, models, panel, list(plan.warnings))
 
 
-def _default_model(adapter: str, role: str) -> str:
+def _default_model(adapter: str, role: str, user_config=None) -> str:
     if adapter == "claude":
         return _CLAUDE_DEFAULTS.get(role, "sonnet")
+    if user_config is not None and adapter in user_config.providers:
+        for configured_role in ("writer", "judge", "editor", "architect", "disruptor", "extractor"):
+            role_model = user_config.roles.get(configured_role)
+            if role_model is not None and role_model.adapter == adapter and role_model.model:
+                return role_model.model
     return ""
 
 

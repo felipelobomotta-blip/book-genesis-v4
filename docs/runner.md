@@ -6,8 +6,13 @@ Run it from the repository root. It reads templates from `agents/` and phase pro
 
 ## Commands
 
+Installed with `pip install -e .`, the same program is the `book-genesis` command; `python -m runner` also works.
+
 ```bash
-python runner/cli.py doctor                      # installed CLIs, role plan, panel seats, warnings
+book-genesis setup                               # choose providers, connect keys (hidden input), pick models
+book-genesis new [--idea "..."] [--language en] [--path DIR] [--human] [--manual]   # idea -> package
+book-genesis resume <project>                    # continue from wherever it stopped
+python runner/cli.py doctor                      # providers found, user config, role plan, panel seats, warnings
 python runner/cli.py init <project> --idea "..." --language en
 python runner/cli.py status <project>
 python runner/cli.py run-phase <project> [--manual] [--fake-responses FILE]
@@ -55,6 +60,8 @@ Phase 3 (drafting) is never run by `run-phase`; it is `book` / `chapter`. Phases
 
 ## Configuration
 
+`~/.book-genesis/config.yaml` (written by `setup`; override the location with `BOOK_GENESIS_CONFIG`) holds the person's own providers and roles and wins over the repository defaults. A provider is a `provider_<name>` entry with `type` (`openai` for any `/chat/completions` endpoint, `anthropic` for the Messages API), `base_url`, and either `api_key` or `api_key_env`. Roles and `panel_*` seats use the same shape as `models.yaml`. Never commit that file.
+
 `runner/config/models.yaml` maps each role (`writer`, `disruptor`, `judge`, `editor`, `architect`, `extractor`) to an adapter and a model alias. The default puts the judge on a different family than the writer.
 
 `runner/config/genre-profiles.yaml` holds, per genre: words per chapter, dialogue share, maximum revision cycles, whether the disruptor runs, and the anti-AI pattern budget. Free-text genres from intake are mapped through the `aliases` block; unknown genres fall back to `default`.
@@ -65,6 +72,8 @@ Phase 3 (drafting) is never run by `run-phase`; it is `book` / `chapter`. Phases
 |---|---|---|
 | `claude` | `claude -p --output-format text --model <alias>`, prompt on stdin | works from inside a Claude Code session |
 | `codex` | `codex exec --ignore-user-config --ephemeral -s read-only -o <file>`, prompt on stdin | `--ignore-user-config` skips the user's MCP servers and skills, which the judge does not need and which cost ~40 s and ~20k tokens per call |
+| provider of type `openai` (from `setup`) | `POST {base_url}/chat/completions`, stdlib `urllib`, key in the Authorization header only | OpenRouter, DeepSeek, OpenAI, Groq, Together, Ollama and LM Studio local servers, any compatible endpoint |
+| provider of type `anthropic` (from `setup`) | `POST {base_url}/v1/messages`, `max_tokens` 16000 | the Anthropic API |
 | any name in `adapters.yaml` | the declared command template, `{model}` filled in, prompt on stdin, reply on stdout | opencode, ollama, Hermes, DeepSeek CLI, anything |
 | `manual` | writes the prompt to `work/manual/<hash>-<role>.prompt.md`, exits 5, reads `<hash>-<role>.response.md` on the next run | chat-only setups: Antigravity, DeepSeek web, a browser tab |
 | `fake` | scripted responses from a file, separated by `=== NEXT ===` lines | tests only |

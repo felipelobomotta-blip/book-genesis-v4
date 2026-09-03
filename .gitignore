@@ -44,3 +44,9 @@ AppData/
 **/Chrome/User Data/
 **/Google/Chrome/User Data/
 scripts/distribution/C*/
+
+*.egg-info/
+
+build/
+
+.book-genesis/

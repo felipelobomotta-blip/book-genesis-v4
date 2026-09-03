@@ -129,6 +129,53 @@ class CliTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
         self.assertTrue((self.project / "manuscript" / "chapters" / "chapter-01.md").exists())
 
+    def test_new_runs_from_idea_to_chapters_with_progress(self) -> None:
+        intake = (
+            "=== FILE: ASSUMPTIONS.md ===\n# Assumptions\n\nInferred: thriller.\n\n"
+            "=== FILE: artifacts/00-brief.md ===\n# Brief\n\nBRIEF-SENTINEL\n\n"
+            "=== FILE: artifacts/01-market-map.md ===\n# Market Map\n\nMARKET-SENTINEL\n\n"
+            "=== FILE: artifacts/02-story-engine.md ===\n# Story Engine\n\nENGINE-SENTINEL\n\n"
+            "=== STATE ===\ntitle: The Watch Room\ngenre: thriller\nlanguage: en\n"
+        )
+        foundation = (
+            "=== FILE: artifacts/03-characters.md ===\n# Characters\n\nCHARACTERS-SENTINEL\n\n"
+            "=== FILE: artifacts/04-theme.md ===\n# Theme\n\nTHEME-SENTINEL\n\n"
+            "=== FILE: artifacts/06-emotional-curve.md ===\n# Curve\n\nCURVE-SENTINEL\n"
+        )
+        architecture = (
+            "=== FILE: artifacts/05-outline.md ===\n" + OUTLINE + "\n"
+            "=== FILE: artifacts/07-opening-strategy.md ===\n# Opening\n\nOPENING-SENTINEL\n"
+        )
+        audit = "=== FILE: artifacts/08-adversarial-audit.md ===\n# Audit\n\nAUDIT-SENTINEL\n"
+        score = "=== FILE: artifacts/09-genesis-score-codex.md ===\n# Diagnostic\n\nSCORE-SENTINEL\n"
+        package = "=== FILE: artifacts/10-editorial-package.md ===\n# Package\n\nPACKAGE-SENTINEL\n"
+        responses = [
+            intake, foundation, architecture,
+            DRAFT, DISRUPTED, YES, YES, YES,
+            DRAFT, DISRUPTED, YES,
+            audit, score, package,
+        ]
+        project = self.tempdir / "new-book"
+        result = run_cli(
+            "new",
+            "--idea", "a night-shift analyst in Brussels",
+            "--language", "en",
+            "--path", str(project),
+            "--fake-responses", str(self.responses(*responses)),
+        )
+        self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
+        self.assertTrue((project / "manuscript" / "chapters" / "chapter-02.md").exists())
+        self.assertIn("Phase 0", result.stdout)
+        self.assertIn("chapter 1", result.stdout)
+        self.assertIn("chapter 2", result.stdout)
+        self.assertIn("RUN_REPORT.md", result.stdout)
+        self.assertIn("PACKAGE-SENTINEL", (project / "artifacts" / "10-editorial-package.md").read_text(encoding="utf-8"))
+        self.assertIn("completed", result.stdout)
+
+    def test_book_genesis_console_script_is_declared(self) -> None:
+        pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn('book-genesis = "runner.cli:main"', pyproject)
+
     def test_doctor_reports_adapters_and_plan(self) -> None:
         result = run_cli("doctor")
         self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)

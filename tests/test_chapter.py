@@ -194,6 +194,20 @@ class RunChapterTests(unittest.TestCase):
         self.assertIn("DISRUPTED-SENTINEL", judge.calls[0])
         self.assertEqual([], adapters["judge"].calls)
 
+    def test_progress_callback_reports_each_step(self) -> None:
+        messages = []
+        run_chapter(
+            self.project,
+            1,
+            make_adapters(writer=[DRAFT], disruptor=[DISRUPTED], judge=[NO_HOOK, YES_BETTER], editor=[EDITED]),
+            progress=messages.append,
+        )
+        joined = "\n".join(messages).lower()
+        for step in ("writer", "disruptor", "judge", "editor"):
+            self.assertIn(step, joined, msg=messages)
+        self.assertIn("turn_page=no", joined)
+        self.assertIn("turn_page=yes", joined)
+
     def test_run_report_records_the_chapter(self) -> None:
         run_chapter(self.project, 1, make_adapters(writer=[DRAFT], disruptor=[DISRUPTED], judge=[YES]))
         report = (self.project / "RUN_REPORT.md").read_text(encoding="utf-8")

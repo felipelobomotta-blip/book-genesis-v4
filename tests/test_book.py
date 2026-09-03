@@ -120,6 +120,18 @@ class RunBookTests(unittest.TestCase):
         self.assertEqual(3, sum(len(adapter.calls) for adapter in member_adapters))
         self.assertIn("DISRUPTED-SENTINEL", member_adapters[0].calls[0].prompt)
 
+    def test_progress_callback_reports_each_chapter_as_it_happens(self) -> None:
+        adapters, models = shared_adapters([DRAFT, DISRUPTED, YES, DRAFT, DISRUPTED, YES])
+        messages = []
+        result = run_book(self.project, adapters, models, progress=messages.append)
+
+        self.assertEqual("completed", result.status)
+        joined = "\n".join(messages)
+        self.assertIn("chapter 1", joined)
+        self.assertIn("chapter 2", joined)
+        self.assertIn("accepted", joined)
+        self.assertLess(joined.index("chapter 1"), joined.index("chapter 2"))
+
     def test_existing_chapters_are_skipped(self) -> None:
         approve(self.project, "chapter-01")
         self.chapter_file(1).write_text("# Chapter 1\n\nAlready written by hand.\n", encoding="utf-8")

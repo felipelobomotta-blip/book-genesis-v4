@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import json
 import os
 from pathlib import Path
 import shlex
@@ -18,7 +19,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from typing import List, Optional, Protocol, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Protocol, Sequence, Tuple, Union
+import urllib.error
+import urllib.request
+
+DEFAULT_MAX_TOKENS = 16000
+Transport = Callable[[str, Dict[str, str], bytes, int], Tuple[int, bytes]]
 
 
 class AdapterError(RuntimeError):
@@ -210,6 +216,122 @@ class ManualAdapter:
         self.directory.mkdir(parents=True, exist_ok=True)
         prompt_path.write_text(prompt, encoding="utf-8")
         raise AwaitingManual(prompt_path, response_path, self.role)
+
+
+class OpenAICompatibleAdapter:
+    """Any ``/chat/completions`` endpoint: OpenRouter, DeepSeek, OpenAI, Groq, Together, local servers.
+
+    Stdlib only. The key travels in the Authorization header and nowhere else; error messages
+    have it masked. ``transport`` is injectable so tests never touch the network.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        base_url: str,
+        api_key: str,
+        *,
+        timeout_seconds: int = 1800,
+        transport: Optional[Transport] = None,
+        extra_headers: Optional[Dict[str, str]] = None,
+    ) -> None:
+        self.name = name
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.timeout_seconds = timeout_seconds
+        self.transport: Transport = transport or _http_post
+        self.extra_headers = dict(extra_headers or {})
+
+    def complete(self, prompt: str, *, model: str = "") -> str:
+        if not model:
+            raise AdapterError(f"{self.name}: a model name is required for this provider (set it with `book-genesis setup`)")
+        if not self.api_key:
+            raise AdapterError(f"{self.name}: no API key; run `book-genesis setup` or set the provider's environment variable")
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+            **self.extra_headers,
+        }
+        body = json.dumps({"model": model, "messages": [{"role": "user", "content": prompt}]}).encode("utf-8")
+        status, raw = self.transport(f"{self.base_url}/chat/completions", headers, body, self.timeout_seconds)
+        if status != 200:
+            raise AdapterError(f"{self.name} returned HTTP {status}: {_safe_excerpt(raw, self.api_key)}")
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            text = data["choices"][0]["message"]["content"]
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise AdapterError(f"{self.name}: unexpected response shape: {_safe_excerpt(raw, self.api_key)}") from exc
+        text = (text or "").strip()
+        if not text:
+            raise AdapterError(f"{self.name} returned empty output")
+        _warn_if_undecodable(text, self.name)
+        return text
+
+
+class AnthropicAdapter:
+    """The Anthropic Messages API, stdlib only."""
+
+    def __init__(
+        self,
+        name: str,
+        base_url: str,
+        api_key: str,
+        *,
+        timeout_seconds: int = 1800,
+        transport: Optional[Transport] = None,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
+    ) -> None:
+        self.name = name
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.timeout_seconds = timeout_seconds
+        self.transport: Transport = transport or _http_post
+        self.max_tokens = max_tokens
+
+    def complete(self, prompt: str, *, model: str = "") -> str:
+        if not model:
+            raise AdapterError(f"{self.name}: a model name is required for this provider (set it with `book-genesis setup`)")
+        if not self.api_key:
+            raise AdapterError(f"{self.name}: no API key; run `book-genesis setup` or set ANTHROPIC_API_KEY")
+        headers = {
+            "Content-Type": "application/json",
+            "x-api-key": self.api_key,
+            "anthropic-version": "2023-06-01",
+        }
+        body = json.dumps(
+            {"model": model, "max_tokens": self.max_tokens, "messages": [{"role": "user", "content": prompt}]}
+        ).encode("utf-8")
+        status, raw = self.transport(f"{self.base_url}/v1/messages", headers, body, self.timeout_seconds)
+        if status != 200:
+            raise AdapterError(f"{self.name} returned HTTP {status}: {_safe_excerpt(raw, self.api_key)}")
+        try:
+            data = json.loads(raw.decode("utf-8"))
+            text = "".join(block.get("text", "") for block in data.get("content", []) if block.get("type") == "text")
+        except (ValueError, AttributeError, TypeError) as exc:
+            raise AdapterError(f"{self.name}: unexpected response shape: {_safe_excerpt(raw, self.api_key)}") from exc
+        text = text.strip()
+        if not text:
+            raise AdapterError(f"{self.name} returned empty output")
+        _warn_if_undecodable(text, self.name)
+        return text
+
+
+def _http_post(url: str, headers: Dict[str, str], body: bytes, timeout_seconds: int) -> Tuple[int, bytes]:
+    request = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
+            return response.status, response.read()
+    except urllib.error.HTTPError as error:
+        return error.code, error.read()
+    except urllib.error.URLError as error:
+        raise AdapterError(f"could not reach {url}: {error.reason}") from error
+
+
+def _safe_excerpt(raw: bytes, secret: str) -> str:
+    text = raw.decode("utf-8", errors="replace")
+    if secret:
+        text = text.replace(secret, "***")
+    return " ".join(text.split())[:300]
 
 
 def _resolve(executable: str) -> List[str]:

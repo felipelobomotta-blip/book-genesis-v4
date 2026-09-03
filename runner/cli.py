@@ -16,6 +16,7 @@ from runner.constants import ROLES, load_model_map  # noqa: E402
 from runner.filesystem import (  # noqa: E402
     advance_phase,
     create_demo,
+    current_phase,
     load_state_summary,
     prepare_agent_packet,
     prepare_phase,
@@ -24,7 +25,7 @@ from runner.filesystem import (  # noqa: E402
     validate_project,
 )
 from runner.judge import Verdict, judge_chapter  # noqa: E402
-from runner.phases import run_phase  # noqa: E402
+from runner.phases import DRAFTING_LABEL, run_phase  # noqa: E402
 from runner.roles import (  # noqa: E402
     KNOWN_CLIS,
     available_adapters,
@@ -33,6 +34,8 @@ from runner.roles import (  # noqa: E402
     load_fake_responses,
     plan_roles,
 )
+from runner.setup import run_setup  # noqa: E402
+from runner.userconfig import load_user_config  # noqa: E402
 
 EXIT_OK = 0
 EXIT_FAILURE = 1
@@ -125,16 +128,37 @@ def build_parser() -> argparse.ArgumentParser:
     panel_parser.add_argument("--manual", action="store_true", help="No CLI: write each seat's prompt to work/manual/")
     panel_parser.add_argument("--fake-responses", default="")
 
-    subparsers.add_parser("doctor", help="Show which model CLIs are installed and how roles will be assigned")
+    subparsers.add_parser("doctor", help="Show which providers are available and how roles will be assigned")
+
+    setup_parser = subparsers.add_parser("setup", help="Choose providers, connect API keys, pick models (once)")
+    setup_parser.add_argument("--path", default="", help="Config file (default: ~/.book-genesis/config.yaml)")
+
+    new_parser = subparsers.add_parser("new", help="From one idea to a judged manuscript and editorial package")
+    new_parser.add_argument("--idea", default="")
+    new_parser.add_argument("--language", default="")
+    new_parser.add_argument("--path", default="", help="Project folder (default: ./books/<slug>)")
+    new_parser.add_argument("--human", action="store_true", help="Pause after chapter 1 until you approve it")
+    new_parser.add_argument("--manual", action="store_true", help="No provider: paste every reply by hand")
+    new_parser.add_argument("--fake-responses", default="")
+
+    resume_parser = subparsers.add_parser("resume", help="Continue a project from wherever it stopped")
+    resume_parser.add_argument("path")
+    resume_parser.add_argument("--human", action="store_true")
+    resume_parser.add_argument("--manual", action="store_true")
+    resume_parser.add_argument("--fake-responses", default="")
 
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+    if not argv:
+        argv = ["new"] if (load_user_config() is not None or any(available_adapters().values())) else ["setup"]
     parser = build_parser()
     args = parser.parse_args(argv)
     _utf8_console()
-    target = Path(args.path) if hasattr(args, "path") else None
+    target = Path(args.path) if getattr(args, "path", "") else None
 
     if args.command == "init":
         scaffold_project(
@@ -231,6 +255,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "doctor":
         return _doctor_command()
 
+    if args.command == "setup":
+        return _setup_command(args)
+
+    if args.command == "new":
+        return _new_command(args)
+
+    if args.command == "resume":
+        return _drive(args, target)
+
     parser.error("Unknown command")
     return EXIT_USAGE
 
@@ -278,16 +311,140 @@ def _setup(args: argparse.Namespace, target: Path | None = None):
     manual_dir = None
     if target is not None and getattr(args, "manual", False):
         manual_dir = target / "work" / "manual"
-    setup = build_role_adapters(fake_responses_path=fake_path, manual_dir=manual_dir)
+    user_config = None if fake_path is not None else load_user_config()
+    setup = build_role_adapters(fake_responses_path=fake_path, manual_dir=manual_dir, user_config=user_config)
     for warning in setup.warnings:
         print(f"warning: {warning}")
     return setup
 
 
+def _progress(message: str) -> None:
+    print(message, flush=True)
+
+
+def _setup_command(args: argparse.Namespace) -> int:
+    import getpass
+
+    def ask(prompt: str, default: str = "") -> str:
+        shown = f"{prompt} [{default}]: " if default else f"{prompt}: "
+        try:
+            answer = input(shown).strip()
+        except EOFError:
+            answer = ""
+        return answer or default
+
+    def secret(prompt: str) -> str:
+        try:
+            return getpass.getpass(f"{prompt}: ").strip()
+        except EOFError:
+            return ""
+
+    path = Path(args.path) if args.path else None
+    run_setup(ask=ask, secret=secret, say=print, path=path)
+    return EXIT_OK
+
+
+def _new_command(args: argparse.Namespace) -> int:
+    idea = args.idea.strip()
+    if not idea:
+        try:
+            idea = input("Your idea, in one sentence: ").strip()
+        except EOFError:
+            idea = ""
+    if not idea:
+        print("An idea is required (use --idea or type it when asked).")
+        return EXIT_USAGE
+    language = args.language.strip()
+    if not language:
+        try:
+            language = input("Language [en]: ").strip() or "en"
+        except EOFError:
+            language = "en"
+    project = Path(args.path) if args.path else Path("books") / _slug(idea)
+    if not (project / "PROJECT_STATE.yaml").exists():
+        scaffold_project(project, idea=idea, language=language, adapter="auto", model_name="auto")
+        print(f"project created at {project}", flush=True)
+    return _drive(args, project)
+
+
+def _drive(args: argparse.Namespace, project: Path) -> int:
+    """Everything from the current phase to the editorial package, with progress on screen."""
+    if project is None or not (project / "PROJECT_STATE.yaml").exists():
+        print(f"no project at {project}; run `book-genesis new` first")
+        return EXIT_FAILURE
+    try:
+        setup = _setup(args, project)
+        for _ in range(8):
+            phase = current_phase(project)
+            if phase.label == DRAFTING_LABEL:
+                break
+            if load_state_summary(project)["status"] == "completed":
+                break
+            print(f"{phase.label}: running...", flush=True)
+            result = run_phase(project, setup.adapters, setup.models)
+            print(f"{result.phase}: wrote {', '.join(result.written) or 'nothing'}", flush=True)
+            if not result.ok:
+                print("not advanced; still missing: " + ", ".join(result.pending))
+                return EXIT_FAILURE
+        if current_phase(project).label == DRAFTING_LABEL:
+            book = run_book(
+                project,
+                setup.adapters,
+                setup.models,
+                human_checkpoint=getattr(args, "human", False),
+                panel=setup.panel,
+                progress=_progress,
+            )
+            print(f"book: {book.status}. {book.message}", flush=True)
+            if book.status == "awaiting_human":
+                print(f"report so far: {project / 'RUN_REPORT.md'}")
+                return EXIT_AWAITING_HUMAN
+            if book.status == "blocked":
+                print(f"report so far: {project / 'RUN_REPORT.md'}")
+                return EXIT_BLOCKED
+            advanced = advance_phase(project)
+            if not advanced["ok"]:
+                print("drafting done but the phase could not advance: " + ", ".join(advanced["pending"]))
+                return EXIT_FAILURE
+        for _ in range(6):
+            if load_state_summary(project)["status"] == "completed":
+                break
+            phase = current_phase(project)
+            print(f"{phase.label}: running...", flush=True)
+            result = run_phase(project, setup.adapters, setup.models)
+            print(f"{result.phase}: wrote {', '.join(result.written) or 'nothing'}", flush=True)
+            if not result.ok:
+                print("not advanced; still missing: " + ", ".join(result.pending))
+                return EXIT_FAILURE
+    except AwaitingHuman as exc:
+        print(f"Awaiting a human reader: {exc}")
+        return EXIT_AWAITING_HUMAN
+    except AwaitingManual as exc:
+        print(f"Awaiting a pasted reply: {exc}")
+        return EXIT_AWAITING_MANUAL
+    except (AdapterError, ValueError, FileNotFoundError, KeyError) as exc:
+        print(f"Stopped: {exc}")
+        return EXIT_FAILURE
+    print(f"done: {project}")
+    print(f"manuscript: {project / 'manuscript' / 'chapters'}")
+    print(f"editorial package: {project / 'artifacts' / '10-editorial-package.md'}")
+    print(f"report: {project / 'RUN_REPORT.md'}")
+    return EXIT_OK
+
+
+def _slug(text: str) -> str:
+    cleaned = "".join(character.lower() if character.isalnum() else "-" for character in text.strip())
+    while "--" in cleaned:
+        cleaned = cleaned.replace("--", "-")
+    return cleaned.strip("-")[:48] or "book"
+
+
 def _chapter_command(args: argparse.Namespace, target: Path) -> int:
     try:
         setup = _setup(args, target)
-        result = run_chapter(target, args.chapter, setup.adapters, models=setup.models, human_checkpoint=args.human)
+        result = run_chapter(
+            target, args.chapter, setup.adapters, models=setup.models, human_checkpoint=args.human, progress=_progress
+        )
     except AwaitingHuman as exc:
         print(f"Awaiting a human reader: {exc}")
         return EXIT_AWAITING_HUMAN
@@ -317,6 +474,7 @@ def _book_command(args: argparse.Namespace, target: Path) -> int:
             end=args.end,
             human_checkpoint=args.human,
             panel=setup.panel,
+            progress=_progress,
         )
     except AwaitingManual as exc:
         print(f"Awaiting a pasted reply: {exc}")
@@ -396,8 +554,16 @@ def _doctor_command() -> int:
     for name in KNOWN_CLIS:
         location = shutil.which(name)
         print(f"  {name}: {'found at ' + location if location else 'not found on PATH'}")
+    for name, ok in found.items():
+        if name not in KNOWN_CLIS:
+            print(f"  {name} (adapters.yaml): {'found' if ok else 'not found on PATH'}")
+    user_config = load_user_config()
+    if user_config is not None:
+        print(user_config.summary())
+    else:
+        print("user config: none (run `book-genesis setup` to choose providers and connect keys)")
     try:
-        plan = plan_roles(found)
+        plan = plan_roles(found, user_config)
     except AdapterError as exc:
         print(f"plan: {exc}")
         return EXIT_FAILURE

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from runner.adapters import Adapter
 from runner.brief import CHAPTER_MARK
@@ -38,6 +38,7 @@ def run_book(
     human_checkpoint: bool = False,
     panel: Optional[Judge] = None,
     panel_chapters: Optional[List[int]] = None,
+    progress: Optional[Callable[[str], None]] = None,
 ) -> BookResult:
     """Chapter 1 (and any chapter in ``panel_chapters``) is judged by the panel when one is given.
 
@@ -51,16 +52,27 @@ def run_book(
     if total == 0:
         raise ValueError("the outline has no `## Chapter N` headings; nothing to write")
 
+    say = progress or (lambda _message: None)
     gate_chapters = set(panel_chapters if panel_chapters is not None else [1])
     first = start or 1
     last = end or total
     done: List[int] = []
     for number in range(first, last + 1):
         if (project / "manuscript" / "chapters" / f"chapter-{number:02d}.md").exists():
+            say(f"chapter {number}: already written, skipped")
             continue
         judge = panel if (panel is not None and number in gate_chapters) else None
+        say(f"chapter {number} of {total}: starting" + (" (reader panel)" if judge is not None else ""))
         try:
-            result = run_chapter(project, number, adapters, models=models, judge=judge, human_checkpoint=human_checkpoint)
+            result = run_chapter(
+                project,
+                number,
+                adapters,
+                models=models,
+                judge=judge,
+                human_checkpoint=human_checkpoint,
+                progress=progress,
+            )
         except AwaitingHuman as exc:
             return BookResult("awaiting_human", done, number, str(exc))
         if not result.accepted:

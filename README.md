@@ -30,34 +30,32 @@ Chapter 1 is read by a **panel** of blind readers before the book goes on: diffe
 
 **Step 1 — Requirements**
 
-- Python 3.10 or newer (no packages to install).
-- Any one of these, installed and logged in: [Claude Code](https://claude.ai/code) (`claude`), the [Codex CLI](https://github.com/openai/codex) (`codex`), or any other command-line model tool declared in `runner/config/adapters.yaml` (opencode, ollama, Hermes, whatever takes a prompt on stdin). Two families is better: the writer and the judge then disagree in useful ways. One family works, with a `single family` warning in the run report.
-- Nothing at all also works: `--manual` writes every prompt to a file and waits for you to paste the reply from any chat (Antigravity, DeepSeek, a browser tab).
+- Python 3.10 or newer. No other packages.
+- A way to run models, any one of these: an API key for OpenRouter, DeepSeek, Anthropic, OpenAI, Groq or Together; a local server (Ollama, LM Studio); [Claude Code](https://claude.ai/code) (`claude`) or the [Codex CLI](https://github.com/openai/codex) (`codex`) already logged in; any other command-line tool declared in `runner/config/adapters.yaml`; or nothing at all with `--manual`, which writes every prompt to a file and waits for you to paste the reply from any chat. Two families is better: the writer and the judge then disagree in useful ways. One family works, with a `single family` warning in the run report.
 
-**Step 2 — Clone**
+**Step 2 — Install the command and choose your providers**
 
 ```bash
 git clone https://github.com/felipelobomotta-blip/book-genesis-v4
 cd book-genesis-v4
-python -m pytest tests -q        # optional: 76 tests, no network
+pip install -e .                 # gives you the `book-genesis` command; nothing else is installed
+book-genesis setup               # providers, keys (typed hidden), models. Once.
+book-genesis doctor              # shows what will run where, and whether every key is set
 ```
 
-`install.sh` / `install.ps1` copy the agent templates and the knowledge base into `~/.claude/` for people who also want to use the templates as Claude Code subagents. The runner itself reads them from this folder, so the installer is optional.
+`setup` writes `~/.book-genesis/config.yaml` and nothing else. A key is stored there, or read from an environment variable if you leave the prompt blank; it never enters the repository, a prompt, or a log. Skip the install if you prefer: `python -m runner ...` and `python runner/cli.py ...` are the same program.
 
-**Step 3 — Run**
+**Step 3 — Give it an idea**
 
 ```bash
-python runner/cli.py doctor                # what is installed, which role runs where, any warning
-python runner/cli.py init my-book --idea "a night-shift analyst notices nine systems failing in lockstep" --language en
-python runner/cli.py run-phase my-book     # Phase 0: intake (brief, market map, story engine)
-python runner/cli.py run-phase my-book     # Phase 1: foundation (characters, theme, emotional curve)
-python runner/cli.py run-phase my-book     # Phase 2: architecture (outline, opening strategy)
-python runner/cli.py book my-book          # every chapter; chapter 1 is read by the reader panel first
+book-genesis new
 ```
 
-Every artifact is a Markdown file in `my-book/`. Nothing happens in chat; everything happens on disk. When it is done, read `my-book/RUN_REPORT.md`: every chapter, every verdict, every warning, in the order they happened.
+It asks for the idea and the language, then runs everything and prints each step as it happens: intake, foundation, architecture, every chapter (chapter 1 through the reader panel), the adversarial audit, the diagnostic score, the editorial package. `book-genesis resume my-book` continues a project from wherever it stopped. The lower-level commands (`run-phase`, `book`, `chapter`, `judge`, `panel`) are still there for when you want one step at a time.
 
-Prefer to read chapter 1 yourself before the rest is written? `book my-book --human` pauses there until you run `approve my-book chapter-01`.
+Every artifact is a Markdown file in the project folder. Nothing happens in chat; everything happens on disk. When it is done, read `RUN_REPORT.md`: every chapter, every verdict, every warning, in the order they happened.
+
+Prefer to read chapter 1 yourself before the rest is written? `book-genesis new --human` pauses there until you run `book-genesis approve <folder> chapter-01`.
 
 ---
 
@@ -93,7 +91,7 @@ What decides now:
 
 1. **A blind reader.** `agents/book-judge.md` receives the chapter's prose and the last 300 words of the previous chapter. Not the outline, not the foundation, not the writer's notes. It answers `turn_page`, `stopped_at` (the exact sentence), `remember` (what it would still have tomorrow) and flags (`hook`, `dialogue`, `pacing`, `ai_pattern`, `exposition`, `voice`, `continuity`).
 2. **Comparison, not grades.** After an edit the judge sees both drafts and says `better`, `worse` or `same`. A model is unreliable at "8.3 vs 8.6" and reasonable at "A vs B". A worse draft is thrown away and the next edit starts from the best one.
-3. **A different family judges.** By default the writer runs on `claude` and the judge on `codex` (see `runner/config/models.yaml`). A system grading its own prose has maximum bias; two families disagree in useful ways. When only one family is installed, the judge takes a different model and the run carries a `single family` warning; `doctor` shows the plan before you spend anything.
+3. **A different family judges.** You choose the providers in `setup` (the repository default is writer on `claude`, judge on `codex`). A system grading its own prose has maximum bias; two families disagree in useful ways. When only one family is available, the judge takes a different model and the run carries a `single family` warning; `doctor` shows the plan before you spend anything.
 4. **A panel reads chapter 1.** Three blind readers with different personas (the genre buyer, the hostile reader, the airport reader), on different families when available. Majority decides; a flag needs two votes. If the voice is wrong, the book finds out after one chapter, not twenty. `panel my-book 7` runs the same panel on any chapter. With `--human` the runner pauses after chapter 1 for you instead.
 5. **The old rubric is a diagnostic.** `agents/book-evaluator.md` (7 dimensions, anti-AI scan) still exists to tell the editor *what* to fix. It does not approve anything.
 
@@ -144,7 +142,7 @@ The current runner has been exercised end to end on a Portuguese-language thrill
 
 ## Cost
 
-The runner calls the `claude` and `codex` command-line tools, which use the subscriptions already logged in on your machine. No API key is read or stored anywhere in this repository.
+You pay your own providers directly: an API key you connected in `setup`, or the subscriptions behind the `claude` and `codex` command-line tools. Nothing in this repository stores a key, and the runner never sends anything anywhere except to the provider you chose.
 
 Per chapter: three model calls minimum (writer, disruptor, judge) plus two per revision cycle (editor, judge). Phases 0–2: one call each. The judge calls are short; the writer calls are the expensive ones.
 
@@ -191,6 +189,7 @@ Six months of iteration, 10+ book projects, one honest review. MIT licensed.
 |---|---|
 | [ADR 0001](docs/adr/0001-runner-orquestra-juiz-cego.md) | Why the runner orchestrates and the judge is blind (PT-BR) |
 | [ADR 0002](docs/adr/0002-autonomia-painel-adaptadores.md) | No human in the loop by default; the reader panel; running on whatever is installed (PT-BR) |
+| [ADR 0003](docs/adr/0003-cli-proprio-provedores-por-api.md) | The `book-genesis` command, `setup`, your own API providers and keys (PT-BR) |
 | [Runner](docs/runner.md) | Commands, exit codes, configuration, what it does not do |
 | [Consistency review](docs/REVISAO-CONSISTENCIA-2026-09.md) | The line-by-line review that led here (PT-BR) |
 | [Phase prompts](docs/book-genesis-codex.md) | The phase prompts the runner feeds to the architect role |

@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 import re
-from typing import Dict, List, Optional, Protocol
+from typing import Callable, Dict, List, Optional, Protocol
 
 from runner.adapters import Adapter
 from runner.brief import TAIL_WORDS, build_chapter_brief, tail_words
@@ -103,8 +103,10 @@ def run_chapter(
     models: Optional[Dict[str, str]] = None,
     judge: Optional[Judge] = None,
     human_checkpoint: bool = False,
+    progress: Optional[Callable[[str], None]] = None,
 ) -> ChapterResult:
     models = models or {}
+    say = progress or (lambda _message: None)
     if human_checkpoint and chapter > 1:
         marker = project / "approvals" / f"{FIRST_CHAPTER_SLUG}.approved"
         if not marker.exists():
@@ -123,18 +125,24 @@ def run_chapter(
     drafts_dir = project / "manuscript" / "drafts" / f"chapter-{chapter:02d}"
     evaluations_dir = project / "evaluations"
 
+    say(f"chapter {chapter}: writer ({adapters['writer'].name}{' ' + models['writer'] if models.get('writer') else ''})...")
     draft = clean_chapter(
         adapters["writer"].complete(writer_prompt(brief, chapter, genre, profile), model=models.get("writer", ""))
     )
+    say(f"chapter {chapter}: writer done, {len(draft.split())} words")
     if profile.disruptor_default and "disruptor" in adapters:
+        say(f"chapter {chapter}: disruptor...")
         draft = clean_chapter(
             adapters["disruptor"].complete(disruptor_prompt(draft, chapter, genre), model=models.get("disruptor", ""))
         )
+        say(f"chapter {chapter}: disruptor done, {len(draft.split())} words")
 
     draft_number = 1
     _write(drafts_dir / f"draft-{draft_number}.md", draft)
+    say(f"chapter {chapter}: judge ({getattr(judge, 'label', 'judge')})...")
     verdict = judge.judge(draft, previous_tail, genre, reader=reader)
     _write(evaluations_dir / f"chapter-{chapter:02d}-judge-{draft_number}.md", verdict.raw)
+    say(f"chapter {chapter}: judge says {_verdict_line(verdict)}")
     verdicts = [verdict]
 
     best, best_verdict = draft, verdict
@@ -142,6 +150,7 @@ def run_chapter(
     cycles = 0
     while not accepted and cycles < profile.max_revision_cycles:
         cycles += 1
+        say(f"chapter {chapter}: editor, cycle {cycles} of {profile.max_revision_cycles} (modes: {', '.join(best_verdict.flags) or 'stopped_at only'})...")
         candidate = clean_chapter(
             adapters["editor"].complete(
                 editor_prompt(best, best_verdict, chapter, genre, profile),
@@ -150,8 +159,10 @@ def run_chapter(
         )
         draft_number += 1
         _write(drafts_dir / f"draft-{draft_number}.md", candidate)
+        say(f"chapter {chapter}: judge compares draft {draft_number} with the previous best...")
         verdict = judge.judge(candidate, previous_tail, genre, previous_draft=best, reader=reader)
         _write(evaluations_dir / f"chapter-{chapter:02d}-judge-{draft_number}.md", verdict.raw)
+        say(f"chapter {chapter}: judge says {_verdict_line(verdict)}")
         verdicts.append(verdict)
         if verdict.vs_previous != "worse":
             best, best_verdict = candidate, verdict
@@ -165,7 +176,16 @@ def run_chapter(
     else:
         result = ChapterResult(chapter, False, "blocked", cycles, drafts_dir / f"draft-{draft_number}.md", verdicts)
     _append_run_report(project, result, label)
+    say(f"chapter {chapter}: {result.status} after {cycles} revision cycle(s)")
     return result
+
+
+def _verdict_line(verdict: Verdict) -> str:
+    return (
+        f"turn_page={'yes' if verdict.turn_page else 'no'}, flags=[{', '.join(verdict.flags)}]"
+        + (f", vs_previous={verdict.vs_previous}" if verdict.vs_previous != "none" else "")
+        + (f", stopped_at={verdict.stopped_at[:60]}" if verdict.stopped_at != "none" else "")
+    )
 
 
 def writer_prompt(brief: str, chapter: int, genre: str, profile: GenreProfile) -> str:
