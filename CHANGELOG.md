@@ -16,7 +16,8 @@ Recorded in `docs/adr/0001-runner-orquestra-juiz-cego.md`, motivated by the line
 - Mechanical fixes from the review (README duplicates, loop max 3 vs 5, dimension 7 never set, `grep -P`, destructive `sed`, taxonomy of structural types, dialogue range).
 - **ADR 0002, same day:** no human in the loop by default. Chapter 1 is judged by a panel of three blind readers (different personas; different families when installed; majority decides, flags need two votes); `--human` restores the pause. `doctor` shows what is installed and how roles fall back; a single-family run carries a warning in `RUN_REPORT.md`. Any CLI can be declared in `runner/config/adapters.yaml`; `--manual` turns every call into a prompt file for chat-only setups (exit 5). `panel <project> <n>` runs the panel on any written chapter.
 - **ADR 0003, same day:** a real command. `pip install -e .` gives `book-genesis`; `setup` is a terminal wizard that stores the person's providers, keys (hidden input; file or environment variable) and models in `~/.book-genesis/config.yaml`, which wins over the repository defaults; providers by API with the standard library only (`openai` type for OpenRouter, DeepSeek, OpenAI, Groq, Together, Ollama, LM Studio and any compatible endpoint; `anthropic` type for the Messages API); `new` runs from the idea to the editorial package with progress on screen; `resume` continues; `doctor` reports key status without ever printing a key.
-- Tests: 12 → 93, no network.
+- **ADR 0004 (2026-09-03):** onboarding shaped like OpenClaw, Hermes and opencode. `setup` detects CLIs, key variables and local servers; one-keystroke quick start; numbered menus; models listed live from the provider; subscriptions through the OAuth logins of the Claude Code and Codex CLIs (with install/login help when missing); a real completion for writer and judge before anything is saved; keep/change/reset on re-run.
+- Tests: 12 → 113, no network.
 
 ## V4.2 — 2026-06-10
 

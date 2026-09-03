@@ -43,7 +43,9 @@ book-genesis setup               # providers, keys (typed hidden), models. Once.
 book-genesis doctor              # shows what will run where, and whether every key is set
 ```
 
-`setup` writes `~/.book-genesis/config.yaml` and nothing else. A key is stored there, or read from an environment variable if you leave the prompt blank; it never enters the repository, a prompt, or a log. Skip the install if you prefer: `python -m runner ...` and `python runner/cli.py ...` are the same program.
+`setup` works the way OpenClaw, Hermes and opencode onboard you. It first looks at what this machine can already run (Claude Code or Codex logged in, API keys in your environment, an Ollama or LM Studio server answering) and offers a one-keystroke **quick start** with what it found. Or you choose by number: your Claude or ChatGPT subscription through the OAuth login of their CLIs, OpenRouter, DeepSeek, Anthropic, OpenAI, Groq, Together, a local server, any other compatible endpoint. Keys are typed hidden or read from an environment variable. Models come as a numbered list fetched live from the provider. Nothing is saved until one real completion has come back from the writer and from the judge. Re-running it later offers keep, change or reset, never a silent wipe.
+
+It writes `~/.book-genesis/config.yaml` and nothing else; a key never enters the repository, a prompt, or a log. Skip the install if you prefer: `python -m runner ...` and `python runner/cli.py ...` are the same program.
 
 **Step 3 — Give it an idea**
 

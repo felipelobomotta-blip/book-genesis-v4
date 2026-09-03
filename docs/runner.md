@@ -60,6 +60,8 @@ Phase 3 (drafting) is never run by `run-phase`; it is `book` / `chapter`. Phases
 
 ## Configuration
 
+`setup` (`runner/setup.py`, `runner/onboarding.py`; ADR 0004) detects installed CLIs, key variables and local servers, offers a quick start with what it found, otherwise a numbered provider menu (subscriptions through the Claude Code and Codex OAuth logins, OpenRouter, DeepSeek, Anthropic, OpenAI, Groq, Together, Ollama, LM Studio, another endpoint, manual), lists models live from the provider, and makes one real completion for the writer and one for the judge before writing anything. A failed check saves nothing and says why, without the key. On an existing config it offers keep, change, or reset.
+
 `~/.book-genesis/config.yaml` (written by `setup`; override the location with `BOOK_GENESIS_CONFIG`) holds the person's own providers and roles and wins over the repository defaults. A provider is a `provider_<name>` entry with `type` (`openai` for any `/chat/completions` endpoint, `anthropic` for the Messages API), `base_url`, and either `api_key` or `api_key_env`. Roles and `panel_*` seats use the same shape as `models.yaml`. Never commit that file.
 
 `runner/config/models.yaml` maps each role (`writer`, `disruptor`, `judge`, `editor`, `architect`, `extractor`) to an adapter and a model alias. The default puts the judge on a different family than the writer.
