@@ -1,11 +1,15 @@
-"""`book-genesis setup`: the onboarding wizard (ADR 0003, revised after ADR 0004).
+"""`book-genesis setup`: the onboarding wizard (ADR 0003, revised by ADR 0004 and 0005).
 
-Shaped like the onboarding of OpenClaw, Hermes and opencode: detect what the machine can
-already run, offer a one-keystroke quick start, prove the choice with a real completion,
-and only then write the config. Re-running is a verification pass, not a reset.
+Shaped like the onboarding of OpenClaw, Hermes and opencode: a banner, a plain-language
+explanation of what writer/judge mean, detection of what the machine can already run, a
+one-keystroke quick start, a real completion to prove the choice before anything is saved.
+Re-running is a verification pass, not a reset.
 
-Every question goes through injectable ``ask`` / ``secret`` / ``say`` callables, so the whole
-flow is testable with scripted answers and never touches the network in tests.
+Menu selection goes through an injectable ``choose`` callable, so the whole flow is testable
+with scripted answers and never touches a real terminal in tests. In real use (`_setup_command`
+in cli.py) `choose` defaults to the arrow-key picker in `runner/tui.py` when stdin/stdout are an
+actual terminal, and to typing a number (`text_choose`, below) otherwise - which is also exactly
+what every test uses, so the arrow-key rendering itself needs no test double here.
 """
 
 from __future__ import annotations
@@ -16,6 +20,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from runner.constants import DEFAULT_PERSONAS, PanelSpec
 from runner.onboarding import Detection, QuickPlan, detect_environment, list_models, quick_plan, verify_candidate
+from runner.tui import banner
 from runner.userconfig import UserConfig, load_user_config, user_config_path, write_user_config
 
 
@@ -31,7 +36,7 @@ class Preset:
     needs_key: bool = True
 
 
-# The provider menu, in the order it is shown. The numbers are part of the interface.
+# The provider menu, in the order it is shown. The numbers/positions are part of the interface.
 MENU: List[Preset] = [
     Preset("claude", "Claude subscription (OAuth through the Claude Code CLI, no key)", "cli", "", "", "opus", "sonnet", needs_key=False),
     Preset("codex", "ChatGPT / Codex subscription (OAuth through the Codex CLI, no key)", "cli", "", "", "", "", needs_key=False),
@@ -58,6 +63,7 @@ MAX_MODELS_SHOWN = 15
 Ask = Callable[..., str]
 Secret = Callable[[str], str]
 Say = Callable[..., None]
+Choose = Callable[[str, List[str], int], int]
 Verifier = Callable[[str, str, Optional[Dict[str, str]]], Tuple[bool, str]]
 Lister = Callable[[str, str, str], List[str]]
 
@@ -72,15 +78,23 @@ def run_setup(
     verifier: Optional[Verifier] = None,
     available: Optional[Dict[str, bool]] = None,
     lister: Optional[Lister] = None,
+    choose: Optional[Choose] = None,
 ) -> Optional[Path]:
     """Returns the config path, or None when the person skipped or a check failed."""
     target = user_config_path(path)
     check = verifier or _default_verifier
     models_of = lister or list_models
+    picker = choose or text_choose(ask, say)
     found = detect_environment(available=available) if detections is None else list(detections)
 
     say("")
-    say("Book Genesis setup")
+    say(banner())
+    say("")
+    say("This decides who writes your book and who judges each chapter.")
+    say("  - The WRITER drafts every chapter from the outline.")
+    say("  - The JUDGE reads each chapter blind - no outline, no plan - and says whether")
+    say("    it would turn the page. A model grading its own prose trusts itself too much,")
+    say("    so a different provider for the judge is the stronger setup.")
     say("Nothing typed here leaves this machine. Keys are stored locally or read from your environment.")
     say("")
 
@@ -90,7 +104,7 @@ def run_setup(
         if existing is not None:
             say(existing.summary())
         say("")
-        choice = _menu(ask, say, "What do you want to do", ["Keep it as it is", "Change it", "Reset and start over"])
+        choice = picker("What do you want to do", ["Keep it as it is", "Change it", "Reset and start over"], 1)
         if choice == 1:
             say("Kept. Run `book-genesis doctor` to check it, or `book-genesis new` to write a book.")
             return target
@@ -111,13 +125,13 @@ def run_setup(
         "Custom: choose the provider and models myself",
         "Skip for now",
     ]
-    choice = _menu(ask, say, "How do you want to run the models", options, default=1 if plan else 2)
+    choice = picker("How do you want to run the models", options, 1 if plan else 2)
     if choice == 3:
         say("Skipped. Run `book-genesis setup` whenever you want.")
         return None
     if choice == 1 and plan is not None:
         return _quick(plan, ask, secret, say, target, check)
-    return _custom(ask, secret, say, target, check, found, models_of)
+    return _custom(ask, secret, say, target, check, found, models_of, picker)
 
 
 def _quick(plan: QuickPlan, ask: Ask, secret: Secret, say: Say, target: Path, check: Verifier) -> Optional[Path]:
@@ -151,29 +165,30 @@ def _custom(
     check: Verifier,
     found: List[Detection],
     models_of: Lister,
+    picker: Choose,
 ) -> Optional[Path]:
     providers: Dict[str, Dict[str, str]] = {}
     detected = {detection.key for detection in found}
     labels = [preset.label + (" [detected]" if preset.key in detected else "") for preset in MENU]
 
     say("")
-    index = _menu(ask, say, "Provider for writing (writer, editor, architect)", labels, default=1)
+    index = picker("Provider for writing (writer, editor, architect)", labels, 1)
     key = MENU[index - 1].key
     if key in OAUTH_HELP and key not in detected:
         say(f"  {OAUTH_HELP[key]}")
-    writer = _entry_for(key, "writing", providers, ask, secret, say, models_of, interactive=True)
+    writer = _entry_for(key, "writing", providers, ask, secret, say, models_of, interactive=True, picker=picker)
 
     say("")
     judge_labels = labels + ["Same as writing"]
-    judge_index = _menu(ask, say, "Provider for judging (a different one is a stronger gate)", judge_labels, default=len(judge_labels))
+    judge_index = picker("Provider for judging (a different one is a stronger gate)", judge_labels, len(judge_labels))
     if judge_index == len(judge_labels):
         default_model = BY_KEY[writer[0]].judge_model if writer[0] in BY_KEY else writer[1]
-        judge = (writer[0], _pick_model(writer[0], "judging", default_model, providers, ask, say, models_of) or writer[1])
+        judge = (writer[0], _pick_model(writer[0], "judging", default_model, providers, ask, say, models_of, picker) or writer[1])
     else:
         key = MENU[judge_index - 1].key
         if key in OAUTH_HELP and key not in detected:
             say(f"  {OAUTH_HELP[key]}")
-        judge = _entry_for(key, "judging", providers, ask, secret, say, models_of, interactive=True)
+        judge = _entry_for(key, "judging", providers, ask, secret, say, models_of, interactive=True, picker=picker)
 
     for label, (adapter_name, model) in (("writer", writer), ("judge", judge)):
         say(f"Checking {label}: {adapter_name}{' ' + model if model else ''} ...")
@@ -199,13 +214,14 @@ def _entry_for(
     models_of: Optional[Lister],
     *,
     interactive: bool,
+    picker: Optional[Choose] = None,
 ) -> Tuple[str, str]:
     preset = BY_KEY[key]
     default_model = preset.writer_model if purpose == "writing" else preset.judge_model
     if preset.type in ("cli", "manual"):
         if not interactive:
             return key, default_model
-        return key, _pick_model(key, purpose, default_model, providers, ask, say, models_of)
+        return key, _pick_model(key, purpose, default_model, providers, ask, say, models_of, picker)
     if key not in providers:
         base_url = preset.base_url or ask(f"Base URL for {key} (ends in /v1)", "")
         entry: Dict[str, str] = {"type": preset.type, "base_url": base_url}
@@ -220,7 +236,7 @@ def _entry_for(
         providers[key] = entry
     if not interactive:
         return key, default_model
-    return key, _pick_model(key, purpose, default_model, providers, ask, say, models_of) or default_model
+    return key, _pick_model(key, purpose, default_model, providers, ask, say, models_of, picker) or default_model
 
 
 def _pick_model(
@@ -231,8 +247,9 @@ def _pick_model(
     ask: Ask,
     say: Say,
     models_of: Optional[Lister],
+    picker: Optional[Choose] = None,
 ) -> str:
-    """A numbered list of live models when the provider can list them; a typed answer otherwise."""
+    """A numbered/arrow-key list of live models when the provider can list them; typed otherwise."""
     candidates: List[str] = []
     if key in CLI_MODELS:
         candidates = list(CLI_MODELS[key])
@@ -249,7 +266,8 @@ def _pick_model(
     shown = _prioritise(candidates, default_model)[:MAX_MODELS_SHOWN]
     options = shown + ["Type another model id"]
     default_index = shown.index(default_model) + 1 if default_model in shown else 1
-    choice = _menu(ask, say, f"Model for {purpose} on {key}", options, default=default_index)
+    chooser = picker or text_choose(ask, say)
+    choice = chooser(f"Model for {purpose} on {key}", options, default_index)
     if choice == len(options):
         return ask("Model id", default_model) or default_model
     return shown[choice - 1]
@@ -302,15 +320,23 @@ def _panel_seats(writer: Tuple[str, str], judge: Tuple[str, str]) -> List[PanelS
     return [PanelSpec(adapter, model, persona) for (adapter, model), persona in zip(seats, DEFAULT_PERSONAS)]
 
 
-def _menu(ask: Ask, say: Say, question: str, options: List[str], default: int = 1) -> int:
-    for number, option in enumerate(options, 1):
-        say(f"  {number}) {option}")
-    answer = (ask(f"{question} [1-{len(options)}]", str(default)) or str(default)).strip()
-    try:
-        chosen = int(answer)
-    except ValueError:
-        return default
-    return chosen if 1 <= chosen <= len(options) else default
+def text_choose(ask: Ask, say: Say) -> Choose:
+    """The plain-text fallback: print '  N) label' for each option, then ask for a number.
+    Used whenever there is no real terminal to draw an arrow-key menu on - including every
+    automated test, which is why the whole business-logic flow above never needs a fake
+    terminal to be exercised."""
+
+    def choose(question: str, options: List[str], default: int) -> int:
+        for number, option in enumerate(options, 1):
+            say(f"  {number}) {option}")
+        answer = (ask(f"{question} [1-{len(options)}]", str(default)) or str(default)).strip()
+        try:
+            chosen = int(answer)
+        except ValueError:
+            return default
+        return chosen if 1 <= chosen <= len(options) else default
+
+    return choose
 
 
 def _plan_line(plan: Optional[QuickPlan]) -> str:
@@ -336,4 +362,4 @@ def _default_verifier(adapter_name: str, model: str, provider: Optional[Dict[str
     return verify_candidate(adapter, model)
 
 
-__all__ = ["run_setup", "MENU", "BY_KEY", "Preset"]
+__all__ = ["run_setup", "MENU", "BY_KEY", "Preset", "text_choose", "Choose"]

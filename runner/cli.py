@@ -35,6 +35,7 @@ from runner.roles import (  # noqa: E402
     plan_roles,
 )
 from runner.setup import run_setup  # noqa: E402
+from runner.tui import interactive_choose, supports_interactive  # noqa: E402
 from runner.userconfig import load_user_config  # noqa: E402
 
 EXIT_OK = 0
@@ -343,7 +344,12 @@ def _setup_command(args: argparse.Namespace) -> int:
             return ""
 
     path = Path(args.path) if args.path else None
-    run_setup(ask=ask, secret=secret, say=print, path=path)
+    choose = interactive_choose if supports_interactive() else None
+    try:
+        run_setup(ask=ask, secret=secret, say=print, path=path, choose=choose)
+    except KeyboardInterrupt:
+        print("\ncancelled")
+        return EXIT_FAILURE
     return EXIT_OK
 
 
