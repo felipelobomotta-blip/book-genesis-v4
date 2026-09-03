@@ -139,12 +139,14 @@ def build_parser() -> argparse.ArgumentParser:
     new_parser.add_argument("--path", default="", help="Project folder (default: ./books/<slug>)")
     new_parser.add_argument("--human", action="store_true", help="Pause after chapter 1 until you approve it")
     new_parser.add_argument("--manual", action="store_true", help="No provider: paste every reply by hand")
+    new_parser.add_argument("--chapters", type=int, default=None, help="Stop after this many chapters (a bounded test run instead of the whole book)")
     new_parser.add_argument("--fake-responses", default="")
 
     resume_parser = subparsers.add_parser("resume", help="Continue a project from wherever it stopped")
     resume_parser.add_argument("path")
     resume_parser.add_argument("--human", action="store_true")
     resume_parser.add_argument("--manual", action="store_true")
+    resume_parser.add_argument("--chapters", type=int, default=None, help="Stop after this many chapters")
     resume_parser.add_argument("--fake-responses", default="")
 
     return parser
@@ -387,11 +389,13 @@ def _drive(args: argparse.Namespace, project: Path) -> int:
             if not result.ok:
                 print("not advanced; still missing: " + ", ".join(result.pending))
                 return EXIT_FAILURE
+        chapter_cap = getattr(args, "chapters", None)
         if current_phase(project).label == DRAFTING_LABEL:
             book = run_book(
                 project,
                 setup.adapters,
                 setup.models,
+                end=chapter_cap,
                 human_checkpoint=getattr(args, "human", False),
                 panel=setup.panel,
                 progress=_progress,
@@ -403,6 +407,11 @@ def _drive(args: argparse.Namespace, project: Path) -> int:
             if book.status == "blocked":
                 print(f"report so far: {project / 'RUN_REPORT.md'}")
                 return EXIT_BLOCKED
+            if chapter_cap is not None:
+                print(f"stopped after {len(book.chapters_done)} chapter(s) by request (--chapters {chapter_cap})")
+                print(f"resume the rest with: book-genesis resume {project}")
+                print(f"report: {project / 'RUN_REPORT.md'}")
+                return EXIT_OK
             advanced = advance_phase(project)
             if not advanced["ok"]:
                 print("drafting done but the phase could not advance: " + ", ".join(advanced["pending"]))

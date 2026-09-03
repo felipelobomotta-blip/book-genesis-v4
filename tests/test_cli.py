@@ -104,6 +104,39 @@ class CliTests(unittest.TestCase):
         approved = run_cli("approve", str(self.project), "chapter-01")
         self.assertEqual(0, approved.returncode, msg=approved.stderr)
 
+    def test_new_stops_after_the_requested_number_of_chapters(self) -> None:
+        intake = (
+            "=== FILE: ASSUMPTIONS.md ===\n# Assumptions\n\nInferred: thriller.\n\n"
+            "=== FILE: artifacts/00-brief.md ===\n# Brief\n\nBRIEF-SENTINEL\n\n"
+            "=== FILE: artifacts/01-market-map.md ===\n# Market Map\n\nMARKET-SENTINEL\n\n"
+            "=== FILE: artifacts/02-story-engine.md ===\n# Story Engine\n\nENGINE-SENTINEL\n\n"
+            "=== STATE ===\ntitle: The Watch Room\ngenre: thriller\nlanguage: en\n"
+        )
+        foundation = (
+            "=== FILE: artifacts/03-characters.md ===\n# Characters\n\nCHARACTERS-SENTINEL\n\n"
+            "=== FILE: artifacts/04-theme.md ===\n# Theme\n\nTHEME-SENTINEL\n\n"
+            "=== FILE: artifacts/06-emotional-curve.md ===\n# Curve\n\nCURVE-SENTINEL\n"
+        )
+        architecture = (
+            "=== FILE: artifacts/05-outline.md ===\n" + OUTLINE + "\n"
+            "=== FILE: artifacts/07-opening-strategy.md ===\n# Opening\n\nOPENING-SENTINEL\n"
+        )
+        responses = [intake, foundation, architecture, DRAFT, DISRUPTED, YES, YES, YES]
+        project = self.tempdir / "capped-book"
+        result = run_cli(
+            "new",
+            "--idea", "a night-shift analyst in Brussels",
+            "--language", "en",
+            "--path", str(project),
+            "--chapters", "1",
+            "--fake-responses", str(self.responses(*responses)),
+        )
+        self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
+        self.assertTrue((project / "manuscript" / "chapters" / "chapter-01.md").exists())
+        self.assertFalse((project / "manuscript" / "chapters" / "chapter-02.md").exists())
+        self.assertIn("stopped after 1 chapter", result.stdout)
+        self.assertNotIn("chapter 2", result.stdout)
+
     def test_book_command_writes_every_chapter_by_default(self) -> None:
         # With fake responses every role shares one adapter, so the panel for chapter 1 reads
         # three responses (one per persona) after writer + disruptor.
