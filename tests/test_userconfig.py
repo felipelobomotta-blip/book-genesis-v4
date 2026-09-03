@@ -83,6 +83,14 @@ class UserConfigTests(unittest.TestCase):
         self.assertIsInstance(setup.adapters["judge"], OpenAICompatibleAdapter)
         self.assertEqual("anthropic/claude-sonnet-4.5", setup.models["writer"])
 
+    def test_single_quoted_empty_model_is_empty_not_the_literal_two_quote_chars(self) -> None:
+        # Found in the real file: a YAML writer emits '' for an empty string, not "". A model
+        # of "''" would be handed to the CLI adapter as an actual -m argument.
+        path = self.path.parent / "single-quoted.yaml"
+        path.write_text("judge:\n  adapter: codex\n  model: ''\n", encoding="utf-8")
+        config = load_user_config(path)
+        self.assertEqual("", config.roles["judge"].model)
+
     def test_reads_a_config_a_real_yaml_editor_wrapped_onto_continuation_lines(self) -> None:
         # Found on disk 2026-09-03: a config with long scalars folded YAML-style
         # (indented continuation line, no colon) broke the two-space parser.
