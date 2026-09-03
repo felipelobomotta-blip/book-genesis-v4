@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
+from runner.constants import DEFAULT_PERSONAS, PanelSpec
 from runner.onboarding import Detection, QuickPlan, detect_environment, list_models, quick_plan, verify_candidate
 from runner.userconfig import UserConfig, load_user_config, user_config_path, write_user_config
 
@@ -260,6 +261,9 @@ def _prioritise(candidates: List[str], default_model: str) -> List[str]:
     return ordered
 
 
+CHEAPER_CLAUDE = {"disruptor": "sonnet", "extractor": "haiku"}
+
+
 def _save(
     providers: Dict[str, Dict[str, str]],
     writer: Tuple[str, str],
@@ -267,9 +271,15 @@ def _save(
     say: Say,
     target: Path,
 ) -> Path:
-    roles: Dict[str, Tuple[str, str]] = {role: writer for role in MAIN_ROLES}
+    writer_adapter, writer_model = writer
+    roles: Dict[str, Tuple[str, str]] = {}
+    for role in MAIN_ROLES:
+        model = writer_model
+        if writer_adapter == "claude" and role in CHEAPER_CLAUDE:
+            model = CHEAPER_CLAUDE[role]
+        roles[role] = (writer_adapter, model)
     roles["judge"] = judge
-    config = UserConfig.from_choices(providers=providers, roles=roles)
+    config = UserConfig.from_choices(providers=providers, roles=roles, panel=_panel_seats(writer, judge))
     saved = write_user_config(config, target)
     say("")
     say(config.summary())
@@ -277,6 +287,19 @@ def _save(
     say(f"Saved to {saved}.")
     say("Next: `book-genesis new` to write a book, or `book-genesis doctor` to check this again.")
     return saved
+
+
+def _panel_seats(writer: Tuple[str, str], judge: Tuple[str, str]) -> List[PanelSpec]:
+    """Three blind seats. With two providers the middle seat comes from the writer's family,
+    so the panel never speaks with one voice; with one provider, all three sit on the judge."""
+    judge_adapter, judge_model = judge
+    writer_adapter, writer_model = writer
+    if writer_adapter == judge_adapter:
+        seats = [(judge_adapter, judge_model)] * 3
+    else:
+        middle_model = BY_KEY[writer_adapter].judge_model if writer_adapter in BY_KEY and BY_KEY[writer_adapter].judge_model else writer_model
+        seats = [(judge_adapter, judge_model), (writer_adapter, middle_model), (judge_adapter, judge_model)]
+    return [PanelSpec(adapter, model, persona) for (adapter, model), persona in zip(seats, DEFAULT_PERSONAS)]
 
 
 def _menu(ask: Ask, say: Say, question: str, options: List[str], default: int = 1) -> int:

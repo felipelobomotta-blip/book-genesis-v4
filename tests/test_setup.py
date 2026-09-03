@@ -77,6 +77,23 @@ class QuickStartTests(unittest.TestCase):
         self.assertEqual(["claude", "codex"], checked)
         self.assertIn("OK", io.transcript)
 
+    def test_quick_start_uses_cheaper_models_for_mechanical_roles(self) -> None:
+        io = ScriptedIO(answers=["1"])
+        run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=BOTH_CLIS, verifier=always_ok)
+        config = load_user_config(self.path)
+        self.assertEqual("opus", config.roles["writer"].model)
+        self.assertEqual("opus", config.roles["editor"].model)
+        self.assertEqual("sonnet", config.roles["disruptor"].model)
+        self.assertEqual("haiku", config.roles["extractor"].model)
+
+    def test_quick_start_with_two_families_mixes_the_panel(self) -> None:
+        io = ScriptedIO(answers=["1"])
+        run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=BOTH_CLIS, verifier=always_ok)
+        config = load_user_config(self.path)
+        adapters = {seat.adapter for seat in config.panel}
+        self.assertEqual({"claude", "codex"}, adapters)
+        self.assertEqual(3, len(config.panel))
+
     def test_menu_is_numbered_and_shows_what_was_detected(self) -> None:
         io = ScriptedIO(answers=["1"])
         run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=BOTH_CLIS, verifier=always_ok)
