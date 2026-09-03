@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -175,6 +176,27 @@ class CliTests(unittest.TestCase):
     def test_book_genesis_console_script_is_declared(self) -> None:
         pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
         self.assertIn('book-genesis = "runner.cli:main"', pyproject)
+
+    def test_judge_command_resolves_an_explicit_provider_from_the_user_config(self) -> None:
+        # Regression: standalone `judge --adapter <name>` used to skip user_config entirely,
+        # so a provider from `setup` (openai, deepseek, ...) failed with "unknown adapter"
+        # instead of actually being tried. Port 1 refuses fast, so this proves the name
+        # resolved to a real HTTP attempt without needing a working key or network.
+        config_path = self.tempdir / "judge-user-config.yaml"
+        config_path.write_text(
+            "provider_myapi:\n  type: openai\n  base_url: http://127.0.0.1:1\n  api_key: sk-test\n",
+            encoding="utf-8",
+        )
+        chapter = self.tempdir / "chapter.md"
+        chapter.write_text(DRAFT, encoding="utf-8")
+        env = dict(os.environ)
+        env["BOOK_GENESIS_CONFIG"] = str(config_path)
+        result = subprocess.run(
+            [sys.executable, str(REPO_ROOT / "runner" / "cli.py"), "judge", str(chapter), "--genre", "thriller", "--adapter", "myapi"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", check=False, env=env, timeout=20,
+        )
+        combined = (result.stdout + result.stderr).lower()
+        self.assertNotIn("unknown adapter", combined, msg=combined)
 
     def test_doctor_reports_adapters_and_plan(self) -> None:
         result = run_cli("doctor")

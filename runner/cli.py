@@ -277,14 +277,15 @@ def _judge_command(args: argparse.Namespace) -> int:
     anchor = Path(args.anchor).read_text(encoding="utf-8") if args.anchor else None
 
     fake_responses = load_fake_responses(Path(args.fake_responses)) if args.fake_responses else None
+    user_config = None if fake_responses is not None else load_user_config()
     adapter_name = args.adapter
     model = args.model
     try:
         if not adapter_name:
-            plan = plan_roles()
+            plan = plan_roles(user_config=user_config)
             adapter_name = plan.roles["judge"].adapter
             model = model or plan.roles["judge"].model
-        adapter = build_adapter(adapter_name, fake_responses=fake_responses)
+        adapter = build_adapter(adapter_name, fake_responses=fake_responses, user_config=user_config)
         verdict = judge_chapter(
             prose,
             previous_tail,

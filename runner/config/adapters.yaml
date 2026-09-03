@@ -1,20 +1,2 @@
-# Any command-line model tool the runner does not know natively (ADR 0002).
-#
-# The prompt goes to the command's stdin; the reply is read from its stdout. `{model}` is
-# replaced by the role's model name (it may be empty). Declare an entry here, then either
-# point roles at it in models.yaml or let `doctor` show it as available: when a configured
-# adapter is missing, the runner falls back to whatever is installed.
-#
-# Examples (uncomment and adjust to the real flags of the tool you use):
-#
-# opencode:
-#   command: opencode run --model {model}
-#
-# ollama:
-#   command: ollama run {model}
-#
-# hermes:
-#   command: hermes chat --model {model}
-#
-# deepseek:
-#   command: deepseek --model {model}
+gemini:
+  command: python runner/bridge_gemini.py {model}
