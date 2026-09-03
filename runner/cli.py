@@ -569,7 +569,11 @@ def _doctor_command() -> int:
             print(f"  {name} (adapters.yaml): {'found' if ok else 'not found on PATH'}")
     user_config = load_user_config()
     if user_config is not None:
-        print(user_config.summary())
+        print(f"user config: {user_config.path}")
+        if user_config.providers:
+            print("providers:")
+            for provider in user_config.providers.values():
+                print(f"  {provider.name}: {provider.type} at {provider.base_url}; key {provider.key_status()}")
     else:
         print("user config: none (run `book-genesis setup` to choose providers and connect keys)")
     try:

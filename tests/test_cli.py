@@ -236,6 +236,26 @@ class CliTests(unittest.TestCase):
         combined = (result.stdout + result.stderr).lower()
         self.assertNotIn("unknown adapter", combined, msg=combined)
 
+    def test_doctor_prints_roles_and_panel_only_once(self) -> None:
+        # Bug found 2026-09-03: doctor printed the user config's own summary() (which
+        # includes "roles:"/"panel:") and then printed the resolved plan's "roles:"/"panel:"
+        # again right after, so a real config with declared roles showed everything twice.
+        config_path = self.tempdir / "doctor-user-config.yaml"
+        config_path.write_text(
+            "provider_deepseek:\n  type: openai\n  base_url: https://api.deepseek.com/v1\n  api_key: sk-x\n"
+            "judge:\n  adapter: deepseek\n  model: deepseek-chat\n",
+            encoding="utf-8",
+        )
+        env = dict(os.environ)
+        env["BOOK_GENESIS_CONFIG"] = str(config_path)
+        result = subprocess.run(
+            [sys.executable, str(REPO_ROOT / "runner" / "cli.py"), "doctor"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", check=False, env=env, timeout=15,
+        )
+        self.assertEqual(1, result.stdout.count("roles:"), msg=result.stdout)
+        self.assertEqual(1, result.stdout.count("panel:"), msg=result.stdout)
+        self.assertIn("deepseek", result.stdout)  # the provider is still shown somewhere
+
     def test_doctor_reports_adapters_and_plan(self) -> None:
         result = run_cli("doctor")
         self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
