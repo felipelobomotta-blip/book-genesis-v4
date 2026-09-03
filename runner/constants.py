@@ -8,13 +8,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, Mapping
+from typing import Dict, Iterable, List, Mapping
 
 from runner.filesystem import load_simple_yaml_map
 
 CONFIG_DIR = Path(__file__).resolve().parent / "config"
 GENRE_PROFILES_PATH = CONFIG_DIR / "genre-profiles.yaml"
 MODELS_PATH = CONFIG_DIR / "models.yaml"
+ADAPTERS_PATH = CONFIG_DIR / "adapters.yaml"
+
+
+def load_generic_adapters() -> Dict[str, str]:
+    """``{adapter name: command template}`` from adapters.yaml; empty when the file has no entries."""
+    if not ADAPTERS_PATH.exists():
+        return {}
+    entries = load_simple_yaml_map(ADAPTERS_PATH)
+    templates: Dict[str, str] = {}
+    for name, values in entries.items():
+        command = str(values.get("command", "")).strip()
+        if command:
+            templates[name.strip().lower()] = command
+    return templates
 
 ROLES = ("writer", "disruptor", "judge", "editor", "architect", "extractor")
 
@@ -35,6 +49,37 @@ class GenreProfile:
 class RoleModel:
     adapter: str
     model: str
+
+
+@dataclass(frozen=True)
+class PanelSpec:
+    adapter: str
+    model: str
+    persona: str
+
+
+DEFAULT_PERSONAS = (
+    "the reader who buys this genre and has read the ten books everyone compares it to",
+    "the hostile reader who did not want to read this and is looking for a reason to stop",
+    "the casual reader who picked this up at an airport and will give it ten pages",
+)
+
+
+def load_panel() -> List[PanelSpec]:
+    """Reader panel seats from models.yaml: every top-level entry whose key starts with ``panel``."""
+    entries = load_simple_yaml_map(MODELS_PATH)
+    panel: List[PanelSpec] = []
+    for key, values in entries.items():
+        if not key.startswith("panel"):
+            continue
+        panel.append(
+            PanelSpec(
+                adapter=str(values.get("adapter", "")).strip(),
+                model=str(values.get("model", "")).strip(),
+                persona=str(values.get("persona", "")).strip(),
+            )
+        )
+    return panel
 
 
 def load_genre_profile(genre: str) -> GenreProfile:
@@ -75,6 +120,8 @@ def load_model_map() -> Dict[str, RoleModel]:
     entries = load_simple_yaml_map(MODELS_PATH)
     model_map: Dict[str, RoleModel] = {}
     for role, values in entries.items():
+        if role.startswith("panel"):
+            continue
         model_map[role] = RoleModel(
             adapter=str(values.get("adapter", "")).strip(),
             model=str(values.get("model", "")).strip(),

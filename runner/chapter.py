@@ -3,7 +3,8 @@
 writer -> disruptor (when the genre wants it) -> blind judge -> [editor -> judge]*
 until the reader would turn the page and the new draft is not worse than the one
 before it, or the genre's revision budget is spent. The runner owns every file;
-the models only ever see text and return text (ADR 0001, decisions 1, 3, 4, 6, 11).
+the models only ever see text and return text (ADR 0001). No human is required;
+``human_checkpoint=True`` restores the pause after chapter 1 (ADR 0002).
 """
 
 from __future__ import annotations
@@ -11,13 +12,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Protocol
 
 from runner.adapters import Adapter
 from runner.brief import TAIL_WORDS, build_chapter_brief, tail_words
 from runner.constants import GenreProfile, load_genre_profile
 from runner.filesystem import load_state_summary
-from runner.judge import Verdict, judge_chapter
+from runner.judge import SingleJudge, Verdict
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AGENTS_DIR = REPO_ROOT / "agents"
@@ -50,8 +51,22 @@ _NOTES_HEADING = re.compile(
 _OUTER_FENCE = re.compile(r"^```[a-zA-Z]*[ \t]*\r?\n(.*)\r?\n```\s*$", re.DOTALL)
 
 
+class Judge(Protocol):
+    label: str
+
+    def judge(
+        self,
+        prose: str,
+        previous_tail: str,
+        genre: str,
+        *,
+        previous_draft: Optional[str] = None,
+        reader: str = "",
+    ) -> Verdict: ...
+
+
 class AwaitingHuman(RuntimeError):
-    """Chapter 1 has to be read by a person before the runner writes chapter 2."""
+    """Human mode only: chapter 1 has to be read by a person before chapter 2 is written."""
 
     def __init__(self, chapter_path: Path, marker: Path) -> None:
         super().__init__(
@@ -86,12 +101,17 @@ def run_chapter(
     adapters: Dict[str, Adapter],
     *,
     models: Optional[Dict[str, str]] = None,
+    judge: Optional[Judge] = None,
+    human_checkpoint: bool = False,
 ) -> ChapterResult:
     models = models or {}
-    if chapter > 1:
+    if human_checkpoint and chapter > 1:
         marker = project / "approvals" / f"{FIRST_CHAPTER_SLUG}.approved"
         if not marker.exists():
             raise AwaitingHuman(project / "manuscript" / "chapters" / f"{FIRST_CHAPTER_SLUG}.md", marker)
+
+    if judge is None:
+        judge = SingleJudge(adapters["judge"], models.get("judge", ""))
 
     summary = load_state_summary(project)
     genre = summary.get("genre", "")
@@ -113,7 +133,7 @@ def run_chapter(
 
     draft_number = 1
     _write(drafts_dir / f"draft-{draft_number}.md", draft)
-    verdict = judge_chapter(draft, previous_tail, genre, adapters["judge"], models.get("judge", ""), reader=reader)
+    verdict = judge.judge(draft, previous_tail, genre, reader=reader)
     _write(evaluations_dir / f"chapter-{chapter:02d}-judge-{draft_number}.md", verdict.raw)
     verdicts = [verdict]
 
@@ -130,26 +150,22 @@ def run_chapter(
         )
         draft_number += 1
         _write(drafts_dir / f"draft-{draft_number}.md", candidate)
-        verdict = judge_chapter(
-            candidate,
-            previous_tail,
-            genre,
-            adapters["judge"],
-            models.get("judge", ""),
-            previous_draft=best,
-            reader=reader,
-        )
+        verdict = judge.judge(candidate, previous_tail, genre, previous_draft=best, reader=reader)
         _write(evaluations_dir / f"chapter-{chapter:02d}-judge-{draft_number}.md", verdict.raw)
         verdicts.append(verdict)
         if verdict.vs_previous != "worse":
             best, best_verdict = candidate, verdict
         accepted = _accepted(verdict)
 
+    label = getattr(judge, "label", "judge")
     if accepted:
         final = project / "manuscript" / "chapters" / f"chapter-{chapter:02d}.md"
         _write(final, best)
-        return ChapterResult(chapter, True, "accepted", cycles, final, verdicts)
-    return ChapterResult(chapter, False, "blocked", cycles, drafts_dir / f"draft-{draft_number}.md", verdicts)
+        result = ChapterResult(chapter, True, "accepted", cycles, final, verdicts)
+    else:
+        result = ChapterResult(chapter, False, "blocked", cycles, drafts_dir / f"draft-{draft_number}.md", verdicts)
+    _append_run_report(project, result, label)
+    return result
 
 
 def writer_prompt(brief: str, chapter: int, genre: str, profile: GenreProfile) -> str:
@@ -249,6 +265,26 @@ def _template(name: str) -> str:
         if end != -1:
             text = text[end + 4 :]
     return text.strip()
+
+
+def _append_run_report(project: Path, result: ChapterResult, judge_label: str) -> None:
+    """RUN_REPORT.md is where the human reads afterwards what used to be said at a checkpoint."""
+    path = project / "RUN_REPORT.md"
+    last = result.verdicts[-1] if result.verdicts else None
+    verdict_text = "no verdict"
+    if last is not None:
+        verdict_text = (
+            f"turn_page={'yes' if last.turn_page else 'no'}, flags=[{', '.join(last.flags)}], "
+            f"stopped_at={last.stopped_at}"
+        )
+    line = (
+        f"- chapter {result.chapter}: {result.status} after {result.cycles} revision cycle(s); "
+        f"judge: {judge_label}; last verdict: {verdict_text}; file: {result.draft_path}"
+    )
+    if not path.exists():
+        path.write_text("# Run Report\n\n## Chapter log\n\n", encoding="utf-8")
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(line + "\n")
 
 
 def _write(path: Path, text: str) -> None:

@@ -82,27 +82,60 @@ class CliTests(unittest.TestCase):
         self.assertIn("accepted", result.stdout)
         self.assertTrue((self.project / "manuscript" / "chapters" / "chapter-01.md").exists())
 
-    def test_chapter_two_fails_closed_until_a_human_approves_chapter_one(self) -> None:
+    def test_chapter_two_runs_without_approval_by_default(self) -> None:
         first = run_cli("chapter", str(self.project), "1", "--fake-responses", str(self.responses(DRAFT, DISRUPTED, YES)))
         self.assertEqual(0, first.returncode, msg=first.stderr)
 
-        blocked = run_cli("chapter", str(self.project), "2", "--fake-responses", str(self.responses(DRAFT, DISRUPTED, YES)))
+        second = run_cli("chapter", str(self.project), "2", "--fake-responses", str(self.responses(DRAFT, DISRUPTED, YES)))
+        self.assertEqual(0, second.returncode, msg=second.stdout + second.stderr)
+        self.assertTrue((self.project / "manuscript" / "chapters" / "chapter-02.md").exists())
+
+    def test_human_flag_fails_closed_until_approved(self) -> None:
+        first = run_cli("chapter", str(self.project), "1", "--fake-responses", str(self.responses(DRAFT, DISRUPTED, YES)))
+        self.assertEqual(0, first.returncode, msg=first.stderr)
+
+        blocked = run_cli(
+            "chapter", str(self.project), "2", "--human", "--fake-responses", str(self.responses(DRAFT, DISRUPTED, YES))
+        )
         self.assertEqual(3, blocked.returncode, msg=blocked.stdout + blocked.stderr)
         self.assertIn("approve", blocked.stdout + blocked.stderr)
 
         approved = run_cli("approve", str(self.project), "chapter-01")
         self.assertEqual(0, approved.returncode, msg=approved.stderr)
 
-        second = run_cli("chapter", str(self.project), "2", "--fake-responses", str(self.responses(DRAFT, DISRUPTED, YES)))
-        self.assertEqual(0, second.returncode, msg=second.stderr)
+    def test_book_command_writes_every_chapter_by_default(self) -> None:
+        # With fake responses every role shares one adapter, so the panel for chapter 1 reads
+        # three responses (one per persona) after writer + disruptor.
+        responses = [DRAFT, DISRUPTED, YES, YES, YES, DRAFT, DISRUPTED, YES]
+        result = run_cli("book", str(self.project), "--fake-responses", str(self.responses(*responses)))
+        self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
+        self.assertIn("completed", result.stdout)
         self.assertTrue((self.project / "manuscript" / "chapters" / "chapter-02.md").exists())
 
-    def test_book_command_runs_until_the_human_checkpoint(self) -> None:
-        result = run_cli("book", str(self.project), "--fake-responses", str(self.responses(DRAFT, DISRUPTED, YES, DRAFT, DISRUPTED, YES)))
-        self.assertEqual(3, result.returncode, msg=result.stdout + result.stderr)
-        self.assertIn("awaiting", result.stdout)
+    def test_manual_adapter_lets_a_chat_only_user_paste_each_answer(self) -> None:
+        answers = {"writer": DRAFT, "disruptor": DISRUPTED, "judge": YES}
+        result = None
+        for _ in range(6):
+            result = run_cli("chapter", str(self.project), "1", "--manual")
+            if result.returncode != 5:
+                break
+            prompts = sorted((self.project / "work" / "manual").glob("*.prompt.md"))
+            waiting = [p for p in prompts if not p.with_name(p.name.replace(".prompt.md", ".response.md")).exists()]
+            self.assertEqual(1, len(waiting), msg=[p.name for p in prompts])
+            role = waiting[0].name.rsplit("-", 1)[1].replace(".prompt.md", "")
+            self.assertIn(role, answers, msg=waiting[0].name)
+            waiting[0].with_name(waiting[0].name.replace(".prompt.md", ".response.md")).write_text(answers[role], encoding="utf-8")
+        assert result is not None
+        self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
         self.assertTrue((self.project / "manuscript" / "chapters" / "chapter-01.md").exists())
-        self.assertFalse((self.project / "manuscript" / "chapters" / "chapter-02.md").exists())
+
+    def test_doctor_reports_adapters_and_plan(self) -> None:
+        result = run_cli("doctor")
+        self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
+        self.assertIn("claude", result.stdout)
+        self.assertIn("codex", result.stdout)
+        self.assertIn("writer", result.stdout)
+        self.assertIn("judge", result.stdout)
 
     def test_run_phase_command_executes_the_current_phase(self) -> None:
         fresh = self.tempdir / "fresh"

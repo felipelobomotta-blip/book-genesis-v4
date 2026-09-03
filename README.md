@@ -20,9 +20,9 @@ You have an idea. Maybe one sentence you never finished.
 
 Type it in. A small Python runner takes it from there: it builds the book's foundation and outline, then writes the manuscript one chapter at a time. Every chapter is read **blind** by a model from a different family than the one that wrote it, someone who has never seen the outline, and who answers the only question that matters: *would I turn the page?* If not, an editor fixes exactly what the reader flagged, and the reader compares the new draft against the old one.
 
-Then the runner stops and asks **you** to read chapter 1 before chapter 2 exists.
+Chapter 1 is read by a **panel** of blind readers before the book goes on: different personas (the genre buyer, the hostile reader, the airport reader) on different model families when your machine has them. No human is required at any point. If you want to read chapter 1 yourself before chapter 2 exists, add `--human`.
 
-**No writing experience required. No prompt engineering. No API keys.**
+**No writing experience required. No prompt engineering. No API keys. No human in the loop unless you ask for one.**
 
 ---
 
@@ -31,14 +31,15 @@ Then the runner stops and asks **you** to read chapter 1 before chapter 2 exists
 **Step 1 — Requirements**
 
 - Python 3.10 or newer (no packages to install).
-- At least one of these, installed and logged in: [Claude Code](https://claude.ai/code) (`claude`) or the [Codex CLI](https://github.com/openai/codex) (`codex`). Both is better: the writer and the judge then come from different families.
+- Any one of these, installed and logged in: [Claude Code](https://claude.ai/code) (`claude`), the [Codex CLI](https://github.com/openai/codex) (`codex`), or any other command-line model tool declared in `runner/config/adapters.yaml` (opencode, ollama, Hermes, whatever takes a prompt on stdin). Two families is better: the writer and the judge then disagree in useful ways. One family works, with a `single family` warning in the run report.
+- Nothing at all also works: `--manual` writes every prompt to a file and waits for you to paste the reply from any chat (Antigravity, DeepSeek, a browser tab).
 
 **Step 2 — Clone**
 
 ```bash
 git clone https://github.com/felipelobomotta-blip/book-genesis-v4
 cd book-genesis-v4
-python -m pytest tests -q        # optional: 52 tests, no network
+python -m pytest tests -q        # optional: 76 tests, no network
 ```
 
 `install.sh` / `install.ps1` copy the agent templates and the knowledge base into `~/.claude/` for people who also want to use the templates as Claude Code subagents. The runner itself reads them from this folder, so the installer is optional.
@@ -46,16 +47,17 @@ python -m pytest tests -q        # optional: 52 tests, no network
 **Step 3 — Run**
 
 ```bash
+python runner/cli.py doctor                # what is installed, which role runs where, any warning
 python runner/cli.py init my-book --idea "a night-shift analyst notices nine systems failing in lockstep" --language en
 python runner/cli.py run-phase my-book     # Phase 0: intake (brief, market map, story engine)
 python runner/cli.py run-phase my-book     # Phase 1: foundation (characters, theme, emotional curve)
 python runner/cli.py run-phase my-book     # Phase 2: architecture (outline, opening strategy)
-python runner/cli.py book my-book          # writes chapter 1, then stops: a human has to read it
-python runner/cli.py approve my-book chapter-01
-python runner/cli.py book my-book          # the rest of the book
+python runner/cli.py book my-book          # every chapter; chapter 1 is read by the reader panel first
 ```
 
-Every artifact is a Markdown file in `my-book/`. Nothing happens in chat; everything happens on disk.
+Every artifact is a Markdown file in `my-book/`. Nothing happens in chat; everything happens on disk. When it is done, read `my-book/RUN_REPORT.md`: every chapter, every verdict, every warning, in the order they happened.
+
+Prefer to read chapter 1 yourself before the rest is written? `book my-book --human` pauses there until you run `approve my-book chapter-01`.
 
 ---
 
@@ -74,7 +76,9 @@ idea ─► Phase 0 intake ─► Phase 1 foundation ─► Phase 2 architecture
         ├─ yes ──────────────────────────────► accepted, saved to manuscript/chapters/
         └─ no ─► editor (modes = judge flags) ─► judge compares new draft vs previous ─► ...
                  (at most N cycles per genre; a worse draft is discarded, not accepted)
-     after chapter 1: STOP until a human runs `approve`
+     chapter 1 only: the judge is a PANEL of three blind readers (different personas and,
+                     when installed, different families); majority decides
+                     (`--human` pauses here for you instead)
 ```
 
 Drafts and verdicts are kept: `manuscript/drafts/chapter-NN/draft-K.md`, `evaluations/chapter-NN-judge-K.md`.
@@ -89,8 +93,8 @@ What decides now:
 
 1. **A blind reader.** `agents/book-judge.md` receives the chapter's prose and the last 300 words of the previous chapter. Not the outline, not the foundation, not the writer's notes. It answers `turn_page`, `stopped_at` (the exact sentence), `remember` (what it would still have tomorrow) and flags (`hook`, `dialogue`, `pacing`, `ai_pattern`, `exposition`, `voice`, `continuity`).
 2. **Comparison, not grades.** After an edit the judge sees both drafts and says `better`, `worse` or `same`. A model is unreliable at "8.3 vs 8.6" and reasonable at "A vs B". A worse draft is thrown away and the next edit starts from the best one.
-3. **A different family judges.** By default the writer runs on `claude` and the judge on `codex` (see `runner/config/models.yaml`). A system grading its own prose has maximum bias; two families disagree in useful ways.
-4. **A human reads chapter 1.** The runner refuses to write chapter 2 until `approvals/chapter-01.approved` exists. If the voice is wrong, you find out after one chapter, not twenty.
+3. **A different family judges.** By default the writer runs on `claude` and the judge on `codex` (see `runner/config/models.yaml`). A system grading its own prose has maximum bias; two families disagree in useful ways. When only one family is installed, the judge takes a different model and the run carries a `single family` warning; `doctor` shows the plan before you spend anything.
+4. **A panel reads chapter 1.** Three blind readers with different personas (the genre buyer, the hostile reader, the airport reader), on different families when available. Majority decides; a flag needs two votes. If the voice is wrong, the book finds out after one chapter, not twenty. `panel my-book 7` runs the same panel on any chapter. With `--human` the runner pauses after chapter 1 for you instead.
 5. **The old rubric is a diagnostic.** `agents/book-evaluator.md` (7 dimensions, anti-AI scan) still exists to tell the editor *what* to fix. It does not approve anything.
 
 Judge any chapter you already have, from any source:
@@ -98,6 +102,7 @@ Judge any chapter you already have, from any source:
 ```bash
 python runner/cli.py judge path/to/chapter.md --genre "literary thriller" --adapter codex
 python runner/cli.py judge path/to/chapter.md --genre "literary thriller" --adapter claude --model sonnet
+python runner/cli.py panel my-book 1        # the whole panel on a chapter the runner wrote
 ```
 
 ---
@@ -147,9 +152,9 @@ Per chapter: three model calls minimum (writer, disruptor, judge) plus two per r
 
 ## Honest caveats
 
-**What the runner guarantees:** every chapter was read blind by a model that did not write it and had not seen the plan; every draft and every verdict is on disk; a human read chapter 1 before chapter 2 was written; no chapter is silently accepted below the reader's bar.
+**What the runner guarantees:** every chapter was read blind by a model that did not write it and had not seen the plan; chapter 1 was read by three blind readers before chapter 2 was written; every draft, every verdict and every warning is on disk; no chapter is silently accepted below the readers' bar.
 
-**What it does not guarantee:** a bestseller, or even a good book. A model reader is not a human reader. The internal signals here are cheaper and less biased than self-grading, and they are still not external validation. The only thing that turns this into a claim is a blind reading test with real people; the protocol for one is being written alongside this repository, and its result will be published whichever way it goes.
+**What it does not guarantee:** a bestseller, or even a good book. A panel of model readers is not a room of human readers. The signals here are cheaper and less biased than self-grading, and they are still not external validation; this README will never say "validated by readers" about a model panel. A blind reading test with real people remains the only thing that turns the output into a claim, and it lives outside the runner as an optional study.
 
 **What is not built:** EPUB/PDF export (the packager writes specs and copy, not files), and the market-research phase inside the runner.
 
@@ -185,6 +190,7 @@ Six months of iteration, 10+ book projects, one honest review. MIT licensed.
 | Document | Description |
 |---|---|
 | [ADR 0001](docs/adr/0001-runner-orquestra-juiz-cego.md) | Why the runner orchestrates and the judge is blind (PT-BR) |
+| [ADR 0002](docs/adr/0002-autonomia-painel-adaptadores.md) | No human in the loop by default; the reader panel; running on whatever is installed (PT-BR) |
 | [Runner](docs/runner.md) | Commands, exit codes, configuration, what it does not do |
 | [Consistency review](docs/REVISAO-CONSISTENCIA-2026-09.md) | The line-by-line review that led here (PT-BR) |
 | [Phase prompts](docs/book-genesis-codex.md) | The phase prompts the runner feeds to the architect role |

@@ -29,3 +29,21 @@ architect:
 extractor:
   adapter: claude
   model: haiku
+
+# The blind reader panel (ADR 0002). It replaces the human checkpoint on chapter 1 and runs
+# on demand with `panel`. Seats whose adapter is not installed fall back to what is, keeping
+# the persona; the runner then records a "single family" warning in RUN_REPORT.md.
+panel_1:
+  adapter: codex
+  model: ""
+  persona: the reader who buys this genre and has read the ten books everyone compares it to
+
+panel_2:
+  adapter: claude
+  model: sonnet
+  persona: the hostile reader who did not want to read this and is looking for a reason to stop
+
+panel_3:
+  adapter: claude
+  model: opus
+  persona: the casual reader who picked this up at an airport and will give it ten pages

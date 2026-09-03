@@ -152,18 +152,53 @@ class RunChapterTests(unittest.TestCase):
         self.assertNotIn("NOTES-SENTINEL", adapters["disruptor"].calls[0].prompt)
         self.assertNotIn("NOTES-SENTINEL", (self.project / "manuscript" / "drafts" / "chapter-01" / "draft-1.md").read_text(encoding="utf-8"))
 
-    def test_second_chapter_waits_for_a_human_to_read_the_first(self) -> None:
+    def test_second_chapter_runs_without_a_human_by_default(self) -> None:
         run_chapter(self.project, 1, make_adapters(writer=[DRAFT], disruptor=[DISRUPTED], judge=[YES]))
 
-        with self.assertRaises(AwaitingHuman):
-            run_chapter(self.project, 2, make_adapters(writer=[DRAFT], disruptor=[DISRUPTED], judge=[YES]))
-
-        approve(self.project, "chapter-01")
         adapters = make_adapters(writer=[DRAFT], disruptor=[DISRUPTED], judge=[YES])
         result = run_chapter(self.project, 2, adapters)
         self.assertTrue(result.accepted)
         self.assertIn("OUTLINE-SENTINEL-CH2", adapters["writer"].calls[0].prompt)
         self.assertIn("DISRUPTED-SENTINEL", adapters["judge"].calls[0].prompt)
+
+    def test_human_checkpoint_is_available_as_an_option(self) -> None:
+        run_chapter(self.project, 1, make_adapters(writer=[DRAFT], disruptor=[DISRUPTED], judge=[YES]))
+
+        with self.assertRaises(AwaitingHuman):
+            run_chapter(
+                self.project, 2, make_adapters(writer=[DRAFT], disruptor=[DISRUPTED], judge=[YES]), human_checkpoint=True
+            )
+
+        approve(self.project, "chapter-01")
+        result = run_chapter(
+            self.project, 2, make_adapters(writer=[DRAFT], disruptor=[DISRUPTED], judge=[YES]), human_checkpoint=True
+        )
+        self.assertTrue(result.accepted)
+
+    def test_a_custom_judge_object_replaces_the_single_judge(self) -> None:
+        class RecordingJudge:
+            def __init__(self) -> None:
+                self.calls = []
+
+            def judge(self, prose, previous_tail, genre, *, previous_draft=None, reader=""):
+                self.calls.append(prose)
+                from runner.judge import parse_verdict
+
+                return parse_verdict(YES)
+
+        judge = RecordingJudge()
+        adapters = make_adapters(writer=[DRAFT], disruptor=[DISRUPTED])
+        result = run_chapter(self.project, 1, adapters, judge=judge)
+        self.assertTrue(result.accepted)
+        self.assertEqual(1, len(judge.calls))
+        self.assertIn("DISRUPTED-SENTINEL", judge.calls[0])
+        self.assertEqual([], adapters["judge"].calls)
+
+    def test_run_report_records_the_chapter(self) -> None:
+        run_chapter(self.project, 1, make_adapters(writer=[DRAFT], disruptor=[DISRUPTED], judge=[YES]))
+        report = (self.project / "RUN_REPORT.md").read_text(encoding="utf-8")
+        self.assertIn("chapter 1", report)
+        self.assertIn("accepted", report)
 
 
 if __name__ == "__main__":

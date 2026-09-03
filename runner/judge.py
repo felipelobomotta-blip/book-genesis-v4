@@ -33,6 +33,39 @@ class Verdict:
     raw: str
 
 
+class SingleJudge:
+    """One blind reader. The default judge object the chapter loop uses."""
+
+    def __init__(self, adapter: Adapter, model: str = "") -> None:
+        self.adapter = adapter
+        self.model = model
+
+    @property
+    def label(self) -> str:
+        return f"single judge ({getattr(self.adapter, 'name', 'adapter')} {self.model})".rstrip() + ")" if False else (
+            f"single judge ({getattr(self.adapter, 'name', 'adapter')}{' ' + self.model if self.model else ''})"
+        )
+
+    def judge(
+        self,
+        prose: str,
+        previous_tail: str,
+        genre: str,
+        *,
+        previous_draft: Optional[str] = None,
+        reader: str = "",
+    ) -> Verdict:
+        return judge_chapter(
+            prose,
+            previous_tail,
+            genre,
+            self.adapter,
+            self.model,
+            previous_draft=previous_draft,
+            reader=reader,
+        )
+
+
 def judge_chapter(
     prose: str,
     previous_tail: str,

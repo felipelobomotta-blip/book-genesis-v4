@@ -7,20 +7,22 @@ This repository is Book Genesis: a Python runner that turns one idea into a manu
 When asked to create, plan, draft, judge, revise, or package a book, **use the runner**. Do not orchestrate the phases by hand and do not grade prose yourself.
 
 ```bash
+python runner/cli.py doctor                     # what is installed; how roles will be assigned
 python runner/cli.py init <project> --idea "..." --language <code>
 python runner/cli.py run-phase <project>        # repeat for intake, foundation, architecture
-python runner/cli.py book <project>             # writes chapters; stops after chapter 1 for a human
-python runner/cli.py approve <project> chapter-01
+python runner/cli.py book <project>             # every chapter; chapter 1 judged by the reader panel
 python runner/cli.py judge <file.md> --genre "..."   # blind-read any chapter
+python runner/cli.py panel <project> <n>        # the whole panel on a written chapter
 ```
 
-The design is recorded in `docs/adr/0001-runner-orquestra-juiz-cego.md`. The short version:
+The design is recorded in `docs/adr/0001-runner-orquestra-juiz-cego.md` and `docs/adr/0002-autonomia-painel-adaptadores.md`. The short version:
 
 - the runner owns every file; models receive text and return text, never tools;
 - the judge (`agents/book-judge.md`) is blind: prose only, no outline, no foundation, no writer notes; it compares drafts instead of scoring them;
 - the writer does not know any rubric; `agents/book-evaluator.md` is a diagnostic for the editor, not a gate;
-- a human must approve chapter 1 before chapter 2 is written;
-- constants live in `runner/config/genre-profiles.yaml` and `runner/config/models.yaml`; prompts reference them and never restate numbers.
+- no human is in the loop by default: chapter 1 is judged by a panel of blind readers (different personas, different families when installed); `--human` pauses for a person instead;
+- the runner uses whatever CLI is installed (`claude`, `codex`, anything declared in `runner/config/adapters.yaml`) or `--manual` prompt files; a single-family run carries a warning in `RUN_REPORT.md`;
+- constants live in `runner/config/genre-profiles.yaml`, `runner/config/models.yaml` and `runner/config/adapters.yaml`; prompts reference them and never restate numbers.
 
 ## Rules
 

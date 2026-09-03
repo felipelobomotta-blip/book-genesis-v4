@@ -2,16 +2,17 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import shutil
 import sys
 
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from runner.adapters import AdapterError  # noqa: E402
+from runner.adapters import AdapterError, AwaitingManual  # noqa: E402
 from runner.book import run_book  # noqa: E402
 from runner.brief import TAIL_WORDS, build_chapter_brief, tail_words  # noqa: E402
 from runner.chapter import AwaitingHuman, approve, clean_chapter, run_chapter  # noqa: E402
-from runner.constants import load_model_map  # noqa: E402
+from runner.constants import ROLES, load_model_map  # noqa: E402
 from runner.filesystem import (  # noqa: E402
     advance_phase,
     create_demo,
@@ -24,13 +25,21 @@ from runner.filesystem import (  # noqa: E402
 )
 from runner.judge import Verdict, judge_chapter  # noqa: E402
 from runner.phases import run_phase  # noqa: E402
-from runner.roles import build_adapter, build_role_adapters, load_fake_responses  # noqa: E402
+from runner.roles import (  # noqa: E402
+    KNOWN_CLIS,
+    available_adapters,
+    build_adapter,
+    build_role_adapters,
+    load_fake_responses,
+    plan_roles,
+)
 
 EXIT_OK = 0
 EXIT_FAILURE = 1
 EXIT_USAGE = 2
 EXIT_AWAITING_HUMAN = 3
 EXIT_BLOCKED = 4
+EXIT_AWAITING_MANUAL = 5
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -77,7 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
     judge_parser.add_argument("--genre", default="")
     judge_parser.add_argument("--reader", default="")
     judge_parser.add_argument("--anchor", default="", help="Published chapter in the same genre, for comparison")
-    judge_parser.add_argument("--adapter", default="", help="claude, codex, or fake (default: the judge role in models.yaml)")
+    judge_parser.add_argument("--adapter", default="", help="claude, codex, or fake (default: the judge role of the plan)")
     judge_parser.add_argument("--model", default="")
     judge_parser.add_argument("--fake-responses", default="")
     judge_parser.add_argument("--out", default="", help="Write the raw judge response here")
@@ -89,21 +98,34 @@ def build_parser() -> argparse.ArgumentParser:
     chapter_parser = subparsers.add_parser("chapter", help="Write, disrupt, judge and revise one chapter")
     chapter_parser.add_argument("path")
     chapter_parser.add_argument("chapter", type=int)
+    chapter_parser.add_argument("--human", action="store_true", help="Pause after chapter 1 until a human approves it")
+    chapter_parser.add_argument("--manual", action="store_true", help="No CLI: write each prompt to work/manual/ and wait for a pasted reply")
     chapter_parser.add_argument("--fake-responses", default="", help="Scripted responses for every role (tests)")
 
-    approve_parser = subparsers.add_parser("approve", help="Record that a human read a chapter and it holds up")
+    approve_parser = subparsers.add_parser("approve", help="Record that a human read a chapter and it holds up (human mode)")
     approve_parser.add_argument("path")
     approve_parser.add_argument("slug", help="e.g. chapter-01")
 
-    book_parser = subparsers.add_parser("book", help="Write every remaining chapter until done, blocked, or a human is needed")
+    book_parser = subparsers.add_parser("book", help="Write every remaining chapter; chapter 1 is judged by the reader panel")
     book_parser.add_argument("path")
     book_parser.add_argument("--from", dest="start", type=int, default=None)
     book_parser.add_argument("--to", dest="end", type=int, default=None)
+    book_parser.add_argument("--human", action="store_true", help="Pause after chapter 1 until a human approves it")
+    book_parser.add_argument("--manual", action="store_true", help="No CLI: write each prompt to work/manual/ and wait for a pasted reply")
     book_parser.add_argument("--fake-responses", default="", help="Scripted responses for every role (tests)")
 
     run_phase_parser = subparsers.add_parser("run-phase", help="Run the current phase through the model; advance when its outputs exist")
     run_phase_parser.add_argument("path")
+    run_phase_parser.add_argument("--manual", action="store_true", help="No CLI: write the prompt to work/manual/ and wait for a pasted reply")
     run_phase_parser.add_argument("--fake-responses", default="", help="Scripted responses (tests)")
+
+    panel_parser = subparsers.add_parser("panel", help="Read one written chapter with the whole blind reader panel")
+    panel_parser.add_argument("path")
+    panel_parser.add_argument("chapter", type=int)
+    panel_parser.add_argument("--manual", action="store_true", help="No CLI: write each seat's prompt to work/manual/")
+    panel_parser.add_argument("--fake-responses", default="")
+
+    subparsers.add_parser("doctor", help="Show which model CLIs are installed and how roles will be assigned")
 
     return parser
 
@@ -203,6 +225,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "run-phase":
         return _run_phase_command(args, target)
 
+    if args.command == "panel":
+        return _panel_command(args, target)
+
+    if args.command == "doctor":
+        return _doctor_command()
+
     parser.error("Unknown command")
     return EXIT_USAGE
 
@@ -215,11 +243,14 @@ def _judge_command(args: argparse.Namespace) -> int:
         previous_tail = tail_words(Path(args.previous).read_text(encoding="utf-8"), TAIL_WORDS)
     anchor = Path(args.anchor).read_text(encoding="utf-8") if args.anchor else None
 
-    judge_role = load_model_map().get("judge")
-    adapter_name = args.adapter or (judge_role.adapter if judge_role else "claude")
-    model = args.model or (judge_role.model if judge_role and adapter_name == judge_role.adapter else "")
     fake_responses = load_fake_responses(Path(args.fake_responses)) if args.fake_responses else None
+    adapter_name = args.adapter
+    model = args.model
     try:
+        if not adapter_name:
+            plan = plan_roles()
+            adapter_name = plan.roles["judge"].adapter
+            model = model or plan.roles["judge"].model
         adapter = build_adapter(adapter_name, fake_responses=fake_responses)
         verdict = judge_chapter(
             prose,
@@ -242,14 +273,27 @@ def _judge_command(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _setup(args: argparse.Namespace, target: Path | None = None):
+    fake_path = Path(args.fake_responses) if getattr(args, "fake_responses", "") else None
+    manual_dir = None
+    if target is not None and getattr(args, "manual", False):
+        manual_dir = target / "work" / "manual"
+    setup = build_role_adapters(fake_responses_path=fake_path, manual_dir=manual_dir)
+    for warning in setup.warnings:
+        print(f"warning: {warning}")
+    return setup
+
+
 def _chapter_command(args: argparse.Namespace, target: Path) -> int:
-    fake_path = Path(args.fake_responses) if args.fake_responses else None
     try:
-        adapters, models = build_role_adapters(fake_responses_path=fake_path)
-        result = run_chapter(target, args.chapter, adapters, models=models)
+        setup = _setup(args, target)
+        result = run_chapter(target, args.chapter, setup.adapters, models=setup.models, human_checkpoint=args.human)
     except AwaitingHuman as exc:
         print(f"Awaiting a human reader: {exc}")
         return EXIT_AWAITING_HUMAN
+    except AwaitingManual as exc:
+        print(f"Awaiting a pasted reply: {exc}")
+        return EXIT_AWAITING_MANUAL
     except (AdapterError, ValueError, FileNotFoundError) as exc:
         print(f"Chapter {args.chapter} failed: {exc}")
         return EXIT_FAILURE
@@ -263,16 +307,27 @@ def _chapter_command(args: argparse.Namespace, target: Path) -> int:
 
 
 def _book_command(args: argparse.Namespace, target: Path) -> int:
-    fake_path = Path(args.fake_responses) if args.fake_responses else None
     try:
-        adapters, models = build_role_adapters(fake_responses_path=fake_path)
-        result = run_book(target, adapters, models, start=args.start, end=args.end)
+        setup = _setup(args, target)
+        result = run_book(
+            target,
+            setup.adapters,
+            setup.models,
+            start=args.start,
+            end=args.end,
+            human_checkpoint=args.human,
+            panel=setup.panel,
+        )
+    except AwaitingManual as exc:
+        print(f"Awaiting a pasted reply: {exc}")
+        return EXIT_AWAITING_MANUAL
     except (AdapterError, ValueError, FileNotFoundError) as exc:
         print(f"Book failed: {exc}")
         return EXIT_FAILURE
 
     print(f"book: {result.status} (chapters written this run: {result.chapters_done or 'none'})")
     print(result.message)
+    print(f"report: {target / 'RUN_REPORT.md'}")
     if result.status == "awaiting_human":
         return EXIT_AWAITING_HUMAN
     if result.status == "blocked":
@@ -281,10 +336,12 @@ def _book_command(args: argparse.Namespace, target: Path) -> int:
 
 
 def _run_phase_command(args: argparse.Namespace, target: Path) -> int:
-    fake_path = Path(args.fake_responses) if args.fake_responses else None
     try:
-        adapters, models = build_role_adapters(fake_responses_path=fake_path)
-        result = run_phase(target, adapters, models)
+        setup = _setup(args, target)
+        result = run_phase(target, setup.adapters, setup.models)
+    except AwaitingManual as exc:
+        print(f"Awaiting a pasted reply: {exc}")
+        return EXIT_AWAITING_MANUAL
     except (AdapterError, ValueError, FileNotFoundError, KeyError) as exc:
         print(f"Phase failed: {exc}")
         return EXIT_FAILURE
@@ -298,6 +355,64 @@ def _run_phase_command(args: argparse.Namespace, target: Path) -> int:
             print(f"  - {item}")
         return EXIT_FAILURE
     print(f"next phase: {result.next_phase}")
+    return EXIT_OK
+
+
+def _panel_command(args: argparse.Namespace, target: Path) -> int:
+    chapter_path = target / "manuscript" / "chapters" / f"chapter-{args.chapter:02d}.md"
+    if not chapter_path.exists():
+        print(f"Panel failed: {chapter_path} does not exist")
+        return EXIT_FAILURE
+    prose = clean_chapter(chapter_path.read_text(encoding="utf-8"))
+    previous_tail = ""
+    previous = target / "manuscript" / "chapters" / f"chapter-{args.chapter - 1:02d}.md"
+    if args.chapter > 1 and previous.exists():
+        previous_tail = tail_words(previous.read_text(encoding="utf-8"), TAIL_WORDS)
+    genre = load_state_summary(target).get("genre", "")
+    try:
+        setup = _setup(args, target)
+        if setup.panel is None:
+            raise AdapterError("no reader panel could be assembled")
+        verdict = setup.panel.judge(prose, previous_tail, genre)
+    except AwaitingManual as exc:
+        print(f"Awaiting a pasted reply: {exc}")
+        return EXIT_AWAITING_MANUAL
+    except (AdapterError, ValueError) as exc:
+        print(f"Panel failed: {exc}")
+        return EXIT_FAILURE
+
+    report = target / "evaluations" / f"chapter-{args.chapter:02d}-panel.md"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(verdict.raw, encoding="utf-8")
+    print(f"# chapter {args.chapter} read blind by {setup.panel.label}")
+    print(format_verdict(verdict))
+    print(f"report: {report}")
+    return EXIT_OK if verdict.turn_page else EXIT_BLOCKED
+
+
+def _doctor_command() -> int:
+    found = available_adapters()
+    print("adapters:")
+    for name in KNOWN_CLIS:
+        location = shutil.which(name)
+        print(f"  {name}: {'found at ' + location if location else 'not found on PATH'}")
+    try:
+        plan = plan_roles(found)
+    except AdapterError as exc:
+        print(f"plan: {exc}")
+        return EXIT_FAILURE
+    print("roles:")
+    for role in ROLES:
+        role_model = plan.roles[role]
+        print(f"  {role}: {role_model.adapter}{' ' + role_model.model if role_model.model else ''}")
+    print("panel:")
+    for spec in plan.panel:
+        print(f"  {spec.adapter}{' ' + spec.model if spec.model else ''} as {spec.persona}")
+    if plan.warnings:
+        for warning in plan.warnings:
+            print(f"warning: {warning}")
+    else:
+        print("warnings: none (writer and judge come from different families)")
     return EXIT_OK
 
 

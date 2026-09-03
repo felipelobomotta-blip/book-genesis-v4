@@ -81,23 +81,44 @@ class RunBookTests(unittest.TestCase):
     def chapter_file(self, number: int) -> Path:
         return self.project / "manuscript" / "chapters" / f"chapter-{number:02d}.md"
 
-    def test_stops_at_the_human_checkpoint_after_chapter_one(self) -> None:
-        adapters, models = shared_adapters([DRAFT, DISRUPTED, YES, DRAFT, DISRUPTED, YES])
-        result = run_book(self.project, adapters, models)
-
-        self.assertEqual("awaiting_human", result.status)
-        self.assertEqual([1], result.chapters_done)
-        self.assertTrue(self.chapter_file(1).exists())
-        self.assertFalse(self.chapter_file(2).exists())
-
-    def test_runs_every_remaining_chapter_once_chapter_one_is_approved(self) -> None:
-        approve(self.project, "chapter-01")
+    def test_writes_the_whole_book_without_a_human_by_default(self) -> None:
         adapters, models = shared_adapters([DRAFT, DISRUPTED, YES, DRAFT, DISRUPTED, YES])
         result = run_book(self.project, adapters, models)
 
         self.assertEqual("completed", result.status)
         self.assertEqual([1, 2], result.chapters_done)
+        self.assertTrue(self.chapter_file(1).exists())
         self.assertTrue(self.chapter_file(2).exists())
+
+    def test_human_mode_stops_after_chapter_one_until_approved(self) -> None:
+        adapters, models = shared_adapters([DRAFT, DISRUPTED, YES, DRAFT, DISRUPTED, YES])
+        result = run_book(self.project, adapters, models, human_checkpoint=True)
+
+        self.assertEqual("awaiting_human", result.status)
+        self.assertEqual([1], result.chapters_done)
+        self.assertFalse(self.chapter_file(2).exists())
+
+        approve(self.project, "chapter-01")
+        result = run_book(self.project, adapters, models, human_checkpoint=True)
+        self.assertEqual("completed", result.status)
+        self.assertEqual([2], result.chapters_done)
+
+    def test_chapter_one_is_judged_by_the_panel_when_one_is_given(self) -> None:
+        from runner.panel import PanelJudge, PanelMember
+
+        member_adapters = [FakeAdapter([YES]) for _ in range(3)]
+        panel = PanelJudge(
+            [
+                PanelMember(adapter=adapter, model="", persona=f"persona {index}")
+                for index, adapter in enumerate(member_adapters)
+            ]
+        )
+        adapters, models = shared_adapters([DRAFT, DISRUPTED, DRAFT, DISRUPTED, YES])
+        result = run_book(self.project, adapters, models, panel=panel)
+
+        self.assertEqual("completed", result.status)
+        self.assertEqual(3, sum(len(adapter.calls) for adapter in member_adapters))
+        self.assertIn("DISRUPTED-SENTINEL", member_adapters[0].calls[0].prompt)
 
     def test_existing_chapters_are_skipped(self) -> None:
         approve(self.project, "chapter-01")

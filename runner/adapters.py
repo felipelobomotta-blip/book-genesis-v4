@@ -1,25 +1,41 @@
 """Model adapters: the only place the runner talks to a model.
 
 Every adapter exposes ``complete(prompt, model=...) -> str``. The model never gets
-tools; the runner does all file I/O. CLI adapters shell out to the locally
-authenticated ``claude`` and ``codex`` command-line tools, so no API key is ever
-read or stored here.
+tools; the runner does all file I/O. CLI adapters shell out to locally authenticated
+command-line tools, so no API key is ever read or stored here. The generic adapter
+runs any command declared in runner/config/adapters.yaml; the manual adapter writes
+the prompt to disk and waits for a person to paste the reply (ADR 0002).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
 import tempfile
-from typing import List, Protocol, Sequence
+from typing import List, Optional, Protocol, Sequence, Tuple, Union
 
 
 class AdapterError(RuntimeError):
     """A model call failed or returned nothing usable."""
+
+
+class AwaitingManual(RuntimeError):
+    """Manual adapter: the prompt is on disk; a person has to paste the model's reply."""
+
+    def __init__(self, prompt_path: Path, response_path: Path, role: str) -> None:
+        super().__init__(
+            f"[{role}] prompt written to {prompt_path}. Send it to your model, paste the full reply "
+            f"into {response_path}, then run the same command again."
+        )
+        self.prompt_path = prompt_path
+        self.response_path = response_path
+        self.role = role
 
 
 @dataclass(frozen=True)
@@ -134,13 +150,66 @@ class CodexCliAdapter:
         return text
 
 
-def _warn_if_undecodable(text: str, adapter_name: str) -> None:
-    """Long `claude -p` replies on Windows occasionally carry a byte pair that is not UTF-8
-    (measured: 2 in ~30k bytes on one 3-minute reply; short replies are clean). The runner
-    keeps the text and says so, because a silent U+FFFD in prose would reach the judge."""
-    count = text.count("�")
-    if count:
-        sys.stderr.write(f"warning: {count} undecodable character(s) in {adapter_name} output; search for �\n")
+class GenericCliAdapter:
+    """Any command-line model tool: prompt on stdin, reply on stdout.
+
+    The command is a template from runner/config/adapters.yaml; ``{model}`` is replaced
+    by the role's model name, which may be empty.
+    """
+
+    def __init__(self, name: str, command_template: str, timeout_seconds: int = 1800) -> None:
+        self.name = name
+        self.command_template = command_template
+        self.timeout_seconds = timeout_seconds
+
+    def render_command(self, model: str = "") -> str:
+        return " ".join(self.command_template.replace("{model}", model).split())
+
+    def complete(self, prompt: str, *, model: str = "") -> str:
+        command = self.render_command(model)
+        head, rest = _split_head(command)
+        resolved = shutil.which(head)
+        if resolved is None:
+            raise AdapterError(f"{head!r} (adapter {self.name}) was not found on PATH")
+        if resolved.lower().endswith((".cmd", ".bat")):
+            command = f'cmd /c "{resolved}" {rest}'.strip()
+        result = _run(command, prompt, timeout_seconds=self.timeout_seconds)
+        if result.returncode != 0:
+            raise AdapterError(f"{self.name} exited {result.returncode}: {result.stderr.strip()[:800]}")
+        text = result.stdout.strip()
+        if not text:
+            raise AdapterError(f"{self.name} returned empty output")
+        _warn_if_undecodable(text, self.name)
+        return text
+
+
+class ManualAdapter:
+    """For people with a chat window and no CLI: the prompt becomes a file, the reply too.
+
+    File names are derived from a hash of the prompt, and the runner's prompts are
+    deterministic, so re-running the same command finds the pasted reply.
+    """
+
+    name = "manual"
+
+    def __init__(self, directory: Path, role: str) -> None:
+        self.directory = Path(directory)
+        self.role = role
+
+    def paths_for(self, prompt: str) -> Tuple[Path, Path]:
+        digest = hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:10]
+        stem = f"{digest}-{self.role}"
+        return self.directory / f"{stem}.prompt.md", self.directory / f"{stem}.response.md"
+
+    def complete(self, prompt: str, *, model: str = "") -> str:
+        prompt_path, response_path = self.paths_for(prompt)
+        if response_path.exists():
+            text = response_path.read_text(encoding="utf-8").strip()
+            if text:
+                return text
+        self.directory.mkdir(parents=True, exist_ok=True)
+        prompt_path.write_text(prompt, encoding="utf-8")
+        raise AwaitingManual(prompt_path, response_path, self.role)
 
 
 def _resolve(executable: str) -> List[str]:
@@ -152,12 +221,28 @@ def _resolve(executable: str) -> List[str]:
     return [path]
 
 
-def _run(command: List[str], prompt: str, *, timeout_seconds: int) -> subprocess.CompletedProcess:
+def _split_head(command: str) -> Tuple[str, str]:
+    """First token of a command line (quotes respected) and the rest."""
+    text = command.strip()
+    if text.startswith('"'):
+        end = text.find('"', 1)
+        if end != -1:
+            return text[1:end], text[end + 1 :].strip()
+    parts = text.split(None, 1)
+    return parts[0], (parts[1] if len(parts) > 1 else "")
+
+
+def _run(command: Union[str, Sequence[str]], prompt: str, *, timeout_seconds: int) -> subprocess.CompletedProcess:
     env = dict(os.environ)
     env.pop("CLAUDECODE", None)  # allow `claude -p` to run from inside a Claude Code session
     env["PYTHONIOENCODING"] = "utf-8"
+    popen_args: Union[str, List[str]]
+    if isinstance(command, str):
+        popen_args = command if os.name == "nt" else shlex.split(command)
+    else:
+        popen_args = list(command)
     return subprocess.run(
-        command,
+        popen_args,
         input=prompt,
         capture_output=True,
         text=True,
@@ -167,3 +252,12 @@ def _run(command: List[str], prompt: str, *, timeout_seconds: int) -> subprocess
         env=env,
         check=False,
     )
+
+
+def _warn_if_undecodable(text: str, adapter_name: str) -> None:
+    """Long `claude -p` replies on Windows occasionally carry a byte pair that is not UTF-8
+    (measured: 2 in ~30k bytes on one 3-minute reply; short replies are clean). The runner
+    keeps the text and says so, because a silent U+FFFD in prose would reach the judge."""
+    count = text.count("�")
+    if count:
+        sys.stderr.write(f"warning: {count} undecodable character(s) in {adapter_name} output; search for �\n")

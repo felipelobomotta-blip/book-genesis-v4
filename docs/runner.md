@@ -7,18 +7,22 @@ Run it from the repository root. It reads templates from `agents/` and phase pro
 ## Commands
 
 ```bash
+python runner/cli.py doctor                      # installed CLIs, role plan, panel seats, warnings
 python runner/cli.py init <project> --idea "..." --language en
 python runner/cli.py status <project>
-python runner/cli.py run-phase <project> [--fake-responses FILE]
+python runner/cli.py run-phase <project> [--manual] [--fake-responses FILE]
 python runner/cli.py brief <project> <chapter>
-python runner/cli.py chapter <project> <chapter> [--fake-responses FILE]
-python runner/cli.py book <project> [--from N] [--to N] [--fake-responses FILE]
-python runner/cli.py approve <project> chapter-01
+python runner/cli.py chapter <project> <chapter> [--human] [--manual] [--fake-responses FILE]
+python runner/cli.py book <project> [--from N] [--to N] [--human] [--manual] [--fake-responses FILE]
+python runner/cli.py panel <project> <chapter> [--manual]   # the whole reader panel on a written chapter
+python runner/cli.py approve <project> chapter-01           # human mode only
 python runner/cli.py judge <file.md> [--previous FILE] [--genre "..."] [--reader "..."] [--anchor FILE]
-                                     [--adapter claude|codex|fake] [--model NAME] [--out FILE]
+                                     [--adapter claude|codex|fake|<adapters.yaml name>] [--model NAME] [--out FILE]
 python runner/cli.py validate <project>
 python runner/cli.py demo <path>                 # deterministic file-contract demo, no model
 ```
+
+`--human` restores the pause after chapter 1 (ADR 0001); without it nothing waits for a person (ADR 0002). `--manual` turns every model call into a prompt file under `work/manual/` for people who only have a chat window.
 
 `prepare-phase`, `advance-phase`, `prepare-swarm` and `prepare-agent-packet` remain for manual use and for the swarm and bestseller-studio contracts; the commands above are the canonical path.
 
@@ -29,8 +33,9 @@ python runner/cli.py demo <path>                 # deterministic file-contract d
 | 0 | done |
 | 1 | failure (adapter error, missing file, phase outputs incomplete) |
 | 2 | usage |
-| 3 | awaiting a human: read `manuscript/chapters/chapter-01.md`, then `approve` |
+| 3 | awaiting a human (`--human` only): read `manuscript/chapters/chapter-01.md`, then `approve` |
 | 4 | blocked: the reader never turned the page within the genre's revision budget; best draft kept in `manuscript/drafts/` |
+| 5 | awaiting a pasted reply (`--manual` only): send `work/manual/<hash>-<role>.prompt.md` to your model, paste the reply into the matching `.response.md`, run the same command again |
 
 ## What one chapter does
 
@@ -39,8 +44,8 @@ python runner/cli.py demo <path>                 # deterministic file-contract d
 3. The **disruptor** runs when the genre profile says so (fiction by default; not for nonfiction).
 4. The **judge** gets prose plus the previous chapter's tail. Never the outline, never the foundation. It returns a fenced YAML block: `turn_page`, `stopped_at`, `remember`, `flags`, `vs_previous`, `vs_anchor`.
 5. If the reader would not turn the page, the **editor** runs in the modes the judge flagged, working from the best draft so far and the exact sentence where attention left the page. The judge then compares the new draft with the previous best. `worse` means the new draft is discarded.
-6. Accepted chapters go to `manuscript/chapters/chapter-NN.md`. Every draft and verdict stays in `manuscript/drafts/` and `evaluations/`.
-7. After chapter 1 is accepted, `book` and `chapter 2` refuse to continue until `approvals/chapter-01.approved` exists.
+6. Accepted chapters go to `manuscript/chapters/chapter-NN.md`. Every draft and verdict stays in `manuscript/drafts/` and `evaluations/`; `RUN_REPORT.md` gets one line per chapter (status, cycles, judge, last verdict).
+7. In `book`, chapter 1 is judged by the **reader panel** instead of the single judge: the seats in `models.yaml` (`panel_*`), each with its own persona, each reading blind. Majority decides `turn_page`; a flag needs two votes in a panel of three; the most-cited `stopped_at` goes to the editor. A seat whose adapter is not installed falls back to what is, keeping the persona. With `--human`, the runner pauses after chapter 1 until `approvals/chapter-01.approved` exists.
 
 ## Phases
 
@@ -60,9 +65,13 @@ Phase 3 (drafting) is never run by `run-phase`; it is `book` / `chapter`. Phases
 |---|---|---|
 | `claude` | `claude -p --output-format text --model <alias>`, prompt on stdin | works from inside a Claude Code session |
 | `codex` | `codex exec --ignore-user-config --ephemeral -s read-only -o <file>`, prompt on stdin | `--ignore-user-config` skips the user's MCP servers and skills, which the judge does not need and which cost ~40 s and ~20k tokens per call |
+| any name in `adapters.yaml` | the declared command template, `{model}` filled in, prompt on stdin, reply on stdout | opencode, ollama, Hermes, DeepSeek CLI, anything |
+| `manual` | writes the prompt to `work/manual/<hash>-<role>.prompt.md`, exits 5, reads `<hash>-<role>.response.md` on the next run | chat-only setups: Antigravity, DeepSeek web, a browser tab |
 | `fake` | scripted responses from a file, separated by `=== NEXT ===` lines | tests only |
 
-No adapter reads or stores an API key. Both CLIs use the session already logged in on the machine.
+No adapter reads or stores an API key. The CLIs use the session already logged in on the machine.
+
+`doctor` runs the same discovery the commands run: it lists which CLIs are on PATH and prints the role plan. When a configured adapter is missing, its roles fall back to the first installed one; when writer and judge end up in the same family, the judge takes a different model and every run prints and records a `single family` warning.
 
 ## Tests
 
@@ -70,7 +79,7 @@ No adapter reads or stores an API key. Both CLIs use the session already logged 
 python -m pytest tests -q
 ```
 
-52 tests, no network: the judge parser and blindness, the genre constants, the brief, the chapter loop (editor only on a `no`, worse drafts discarded, revision budget, nonfiction skips the disruptor, craft notes never reach the manuscript, human checkpoint), the phases, the book loop, and the CLI by subprocess.
+76 tests, no network: the judge parser and blindness, the genre constants, the brief (headings and bold chapter markers), the chapter loop (editor only on a `no`, worse drafts discarded, revision budget, nonfiction skips the disruptor, craft notes never reach the manuscript, optional human checkpoint, pluggable judge, run report), the reader panel (aggregation and blind seats), the role plan (both families, one family, none), the generic and manual adapters, the phases, the book loop, and the CLI by subprocess including the manual round trip and `doctor`.
 
 ## Measured run (2026-09-02, Windows 11, subscriptions only)
 
@@ -81,7 +90,8 @@ Idea: *"Uma analista de plantão noturno em Brasília percebe que nove sistemas 
 | Phase 0 intake | ASSUMPTIONS.md + 3 artifacts; state updated (title *Nove Erros Idênticos*, genre thriller, 95k words) | 216 s |
 | Phase 1 foundation | characters, theme, emotional curve | 353 s |
 | Phase 2 architecture | outline (4 parts, 38 chapters, 12 documentary artifacts) + opening strategy | 306 s |
-| chapter 1 (`book`) | brief 30 KB assembled; writer + disruptor produced a 1,712-word chapter; blind judge: `turn_page: yes`, no flags, five remembered items; accepted on the first pass; runner stopped with exit 3 for the human checkpoint | 268 s (writer + disruptor ≈ 256 s, judge ≈ 12 s) |
+| chapter 1 (`book`) | brief 30 KB assembled; writer + disruptor produced a 1,712-word chapter; blind judge: `turn_page: yes`, no flags, five remembered items; accepted on the first pass; runner stopped with exit 3 for the human checkpoint (ADR 0001 behaviour, now `--human` only) | 268 s (writer + disruptor ≈ 256 s, judge ≈ 12 s) |
+| chapter 1 (`panel`, ADR 0002) | three blind readers: codex as the genre buyer, claude sonnet as the hostile reader, claude opus as the airport reader; majority `turn_page: yes`; no flag reached two votes; one reader's attention dropped at the paragraph inventorying the nine data collectors; thirteen remembered details across the three (the coat with the cigarette burn, "412. 412. 412.", the foot that stopped moving) | ≈ 210 s for the three seats |
 
 The first `book` run had failed closed in 0 s: the architect had written chapters as bold lines (`**Capítulo 1 — 3h14**`), not headings. Two fixes followed, both kept: the architecture prompt now states the heading contract, and the runner also accepts bold chapter markers in English and Portuguese (tests `test_bold_portuguese_chapter_markers_are_understood`, `test_counts_bold_portuguese_markers_too`). The second run went through.
 

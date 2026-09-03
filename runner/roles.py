@@ -1,14 +1,125 @@
-"""Build the adapter for each role from runner/config/models.yaml (or a fake for tests)."""
+"""Discover what is installed and assign every role and every panel seat (ADR 0002).
+
+The configured map in runner/config/models.yaml is a preference, not a requirement: a
+role whose adapter is not on this machine falls back to what is. The judge prefers a
+different family than the writer; when only one family exists the judge takes a
+different model and the plan carries a "single family" warning that ends up in
+RUN_REPORT.md. Nothing here reads an API key.
+"""
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+import shutil
+from typing import Dict, List, Optional
 
-from runner.adapters import Adapter, AdapterError, ClaudeCliAdapter, CodexCliAdapter, FakeAdapter
-from runner.constants import ROLES, load_model_map
+from runner.adapters import (
+    Adapter,
+    AdapterError,
+    ClaudeCliAdapter,
+    CodexCliAdapter,
+    FakeAdapter,
+    GenericCliAdapter,
+    ManualAdapter,
+)
+from runner.constants import (
+    DEFAULT_PERSONAS,
+    ROLES,
+    PanelSpec,
+    RoleModel,
+    load_generic_adapters,
+    load_model_map,
+    load_panel,
+)
+from runner.panel import PanelJudge, PanelMember
 
 FAKE_SEPARATOR = "=== NEXT ==="
+KNOWN_CLIS = ("claude", "codex")
+
+_CLAUDE_DEFAULTS = {
+    "writer": "opus",
+    "editor": "opus",
+    "architect": "opus",
+    "judge": "sonnet",
+    "disruptor": "sonnet",
+    "extractor": "haiku",
+}
+_CLAUDE_ALTERNATIVE = {"opus": "sonnet", "sonnet": "opus", "haiku": "sonnet"}
+
+
+@dataclass
+class RolePlan:
+    roles: Dict[str, RoleModel]
+    panel: List[PanelSpec]
+    warnings: List[str] = field(default_factory=list)
+
+
+@dataclass
+class RunSetup:
+    adapters: Dict[str, Adapter]
+    models: Dict[str, str]
+    panel: Optional[PanelJudge]
+    warnings: List[str] = field(default_factory=list)
+
+
+def available_adapters() -> Dict[str, bool]:
+    found = {name: shutil.which(name) is not None for name in KNOWN_CLIS}
+    for name, template in load_generic_adapters().items():
+        head = template.split()[0].strip('"') if template.split() else ""
+        found[name] = bool(head) and shutil.which(head) is not None
+    return found
+
+
+def plan_roles(available: Optional[Dict[str, bool]] = None) -> RolePlan:
+    found = dict(available) if available is not None else available_adapters()
+    installed = [name for name in KNOWN_CLIS if found.get(name)]
+    installed += [name for name, ok in found.items() if ok and name not in KNOWN_CLIS]
+    if not installed:
+        raise AdapterError(
+            "no model CLI found on PATH. Install Claude Code (`claude`) or the Codex CLI (`codex`) and log in, "
+            "declare another CLI in runner/config/adapters.yaml, or run with the manual adapter (`--manual`)."
+        )
+    fallback = installed[0]
+
+    configured = load_model_map()
+    roles: Dict[str, RoleModel] = {}
+    for role in ROLES:
+        wanted = configured.get(role, RoleModel(fallback, ""))
+        if found.get(wanted.adapter):
+            roles[role] = wanted
+        else:
+            roles[role] = RoleModel(fallback, _default_model(fallback, role))
+
+    warnings: List[str] = []
+    writer, judge = roles["writer"], roles["judge"]
+    if writer.adapter == judge.adapter:
+        other = [name for name in installed if name != writer.adapter]
+        if other:
+            roles["judge"] = RoleModel(other[0], _default_model(other[0], "judge"))
+        else:
+            if not judge.model or judge.model == writer.model:
+                roles["judge"] = RoleModel(writer.adapter, _different_model(writer.adapter, writer.model))
+            warnings.append(
+                f"single family: writer and judge both run on `{writer.adapter}` "
+                f"(judge model {roles['judge'].model or 'default'}). A judge from another family is a stronger "
+                "gate; install a second CLI when you can."
+            )
+
+    panel: List[PanelSpec] = []
+    for spec in load_panel():
+        if found.get(spec.adapter):
+            panel.append(spec)
+        else:
+            model = spec.model if (fallback == "claude" and spec.model) else _default_model(fallback, "judge")
+            panel.append(PanelSpec(fallback, model, spec.persona))
+    if not panel:
+        panel = [PanelSpec(fallback, _default_model(fallback, "judge"), persona) for persona in DEFAULT_PERSONAS]
+    panel = _distinct_personas(panel)
+    if len({spec.adapter for spec in panel}) == 1 and not any(w.startswith("single family") for w in warnings):
+        warnings.append(f"single family: the reader panel runs entirely on `{panel[0].adapter}`.")
+
+    return RolePlan(roles=roles, panel=panel, warnings=warnings)
 
 
 def load_fake_responses(path: Path) -> List[str]:
@@ -17,7 +128,13 @@ def load_fake_responses(path: Path) -> List[str]:
     return [part for part in parts if part.strip()]
 
 
-def build_adapter(name: str, *, fake_responses: Optional[List[str]] = None) -> Adapter:
+def build_adapter(
+    name: str,
+    *,
+    fake_responses: Optional[List[str]] = None,
+    manual_dir: Optional[Path] = None,
+    role: str = "",
+) -> Adapter:
     normalized = name.strip().lower()
     if normalized == "fake":
         return FakeAdapter(fake_responses or [])
@@ -26,27 +143,83 @@ def build_adapter(name: str, *, fake_responses: Optional[List[str]] = None) -> A
     if normalized == "codex":
         return CodexCliAdapter()
     if normalized == "manual":
-        raise AdapterError("the manual adapter is not available yet; use claude, codex, or fake")
-    raise AdapterError(f"unknown adapter {name!r}; use claude, codex, or fake")
+        if manual_dir is None:
+            raise AdapterError("the manual adapter needs a project: run `chapter`, `book`, `run-phase` or `panel` with --manual")
+        return ManualAdapter(manual_dir, role or "model")
+    generic = load_generic_adapters()
+    if normalized in generic:
+        return GenericCliAdapter(normalized, generic[normalized])
+    raise AdapterError(
+        f"unknown adapter {name!r}; use claude, codex, manual, fake, or a name declared in runner/config/adapters.yaml"
+    )
 
 
-def build_role_adapters(*, fake_responses_path: Optional[Path] = None) -> Tuple[Dict[str, Adapter], Dict[str, str]]:
-    """One adapter per role plus the model name per role.
+def build_role_adapters(
+    *,
+    fake_responses_path: Optional[Path] = None,
+    available: Optional[Dict[str, bool]] = None,
+    manual_dir: Optional[Path] = None,
+) -> RunSetup:
+    """Adapters and models per role plus the reader panel.
 
-    With ``fake_responses_path`` every role shares a single scripted adapter, so the
-    responses are consumed in call order (writer, disruptor, judge, editor, judge...).
+    With ``fake_responses_path`` every role and every panel seat shares one scripted adapter,
+    so responses are consumed in call order (writer, disruptor, judge or panel seats, editor...).
+    With ``manual_dir`` every call becomes a prompt file a person answers by hand.
     """
     if fake_responses_path is not None:
         shared = FakeAdapter(load_fake_responses(fake_responses_path))
-        return {role: shared for role in ROLES}, {role: "" for role in ROLES}
+        panel = PanelJudge([PanelMember(shared, "", persona) for persona in DEFAULT_PERSONAS])
+        return RunSetup({role: shared for role in ROLES}, {role: "" for role in ROLES}, panel, [])
 
-    model_map = load_model_map()
+    if manual_dir is not None:
+        adapters: Dict[str, Adapter] = {role: ManualAdapter(manual_dir, role) for role in ROLES}
+        panel = PanelJudge(
+            [
+                PanelMember(ManualAdapter(manual_dir, f"panel{index}"), "", persona)
+                for index, persona in enumerate(DEFAULT_PERSONAS, 1)
+            ]
+        )
+        note = (
+            f"manual: every model call becomes a prompt file under {manual_dir}; paste each reply into the "
+            "matching .response.md and run the same command again"
+        )
+        return RunSetup(adapters, {role: "" for role in ROLES}, panel, [note])
+
+    plan = plan_roles(available)
     cache: Dict[str, Adapter] = {}
-    adapters: Dict[str, Adapter] = {}
-    models: Dict[str, str] = {}
-    for role, role_model in model_map.items():
-        if role_model.adapter not in cache:
-            cache[role_model.adapter] = build_adapter(role_model.adapter)
-        adapters[role] = cache[role_model.adapter]
-        models[role] = role_model.model
-    return adapters, models
+
+    def get(name: str) -> Adapter:
+        if name not in cache:
+            cache[name] = build_adapter(name)
+        return cache[name]
+
+    adapters = {role: get(role_model.adapter) for role, role_model in plan.roles.items()}
+    models = {role: role_model.model for role, role_model in plan.roles.items()}
+    panel = PanelJudge([PanelMember(get(spec.adapter), spec.model, spec.persona) for spec in plan.panel])
+    return RunSetup(adapters, models, panel, list(plan.warnings))
+
+
+def _default_model(adapter: str, role: str) -> str:
+    if adapter == "claude":
+        return _CLAUDE_DEFAULTS.get(role, "sonnet")
+    return ""
+
+
+def _different_model(adapter: str, model: str) -> str:
+    if adapter == "claude":
+        return _CLAUDE_ALTERNATIVE.get(model, "sonnet")
+    return ""
+
+
+def _distinct_personas(panel: List[PanelSpec]) -> List[PanelSpec]:
+    seen: Dict[str, int] = {}
+    result: List[PanelSpec] = []
+    for index, spec in enumerate(panel):
+        persona = spec.persona or DEFAULT_PERSONAS[index % len(DEFAULT_PERSONAS)]
+        if persona in seen:
+            seen[persona] += 1
+            persona = f"{persona} ({seen[persona]})"
+        else:
+            seen[persona] = 1
+        result.append(PanelSpec(spec.adapter, spec.model, persona))
+    return result

@@ -14,7 +14,8 @@ Recorded in `docs/adr/0001-runner-orquestra-juiz-cego.md`, motivated by the line
 - A human must approve chapter 1 (`approve <project> chapter-01`) before chapter 2 is written.
 - Three earlier pipelines (`skills/book-genesis-full`, `skills/book-genesis`, `skills/optional`, `skills/deprecated`, the orchestrator agent, `docs/architecture.md`) moved, not deleted, to `legacy/`.
 - Mechanical fixes from the review (README duplicates, loop max 3 vs 5, dimension 7 never set, `grep -P`, destructive `sed`, taxonomy of structural types, dialogue range).
-- Tests: 12 → 52, no network.
+- **ADR 0002, same day:** no human in the loop by default. Chapter 1 is judged by a panel of three blind readers (different personas; different families when installed; majority decides, flags need two votes); `--human` restores the pause. `doctor` shows what is installed and how roles fall back; a single-family run carries a warning in `RUN_REPORT.md`. Any CLI can be declared in `runner/config/adapters.yaml`; `--manual` turns every call into a prompt file for chat-only setups (exit 5). `panel <project> <n>` runs the panel on any written chapter.
+- Tests: 12 → 76, no network.
 
 ## V4.2 — 2026-06-10
 
