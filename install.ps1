@@ -15,7 +15,7 @@ $TargetAgents = Join-Path $env:USERPROFILE ".claude\agents"
 
 Write-Host ""
 Write-Host "Book Genesis" -ForegroundColor Blue
-Write-Host "V4/V5 legacy system + portable Codex edition" -ForegroundColor Yellow
+Write-Host "Copies the agent templates and knowledge base to ~/.claude (optional: the runner reads them from this clone)" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Installing skills, supporting references, agents, and knowledge base" -ForegroundColor Yellow
 Write-Host ""
@@ -67,24 +67,24 @@ if (Test-Path $AgentsDir) {
     }
 }
 
-# Verify every subagent_type the orchestrator dispatches is actually installed.
-# A missing one stalls the pipeline mid-run, so fail loudly here instead.
+# Verify every template the runner reads is present (runner/chapter.py, runner/phases.py).
+# A missing one fails the runner closed, so fail loudly here instead.
 $PipelineAgents = @(
     "book-researcher", "book-architect", "entity-tracker", "continuity-guardian",
-    "book-writer", "dialogue-polish", "hook-craft", "book-disruptor",
+    "book-writer", "book-disruptor", "book-judge",
     "book-evaluator", "book-editor", "book-packager"
 )
 $missing = $PipelineAgents | Where-Object { -not (Test-Path (Join-Path $TargetAgents "$_.md")) }
 
 Write-Host ""
 if ($missing) {
-    Write-Host "Pipeline incomplete. The orchestrator dispatches agents that are not installed:" -ForegroundColor Red
+    Write-Host "Pipeline incomplete. Templates the runner needs are not installed:" -ForegroundColor Red
     $missing | ForEach-Object { Write-Host "  - $_" -ForegroundColor Red }
     Write-Host ""
-    Write-Host "The book-orchestrator will stall when it reaches one of these."
+    Write-Host "The runner fails closed when it reaches one of these."
     exit 1
 }
-Write-Host "Pipeline verified. All 11 orchestrator agents resolve." -ForegroundColor Green
+Write-Host "Pipeline verified. All 10 runner templates resolve." -ForegroundColor Green
 
 Write-Host ""
 Write-Host "Done. $count skills + $agentCount agents + $kbCount knowledge files installed" -ForegroundColor Green
@@ -93,5 +93,6 @@ Write-Host "Skills:    $TargetSkills" -ForegroundColor Blue
 Write-Host "Agents:    $TargetAgents" -ForegroundColor Blue
 Write-Host "Knowledge: $TargetKnowledge" -ForegroundColor Blue
 Write-Host ""
-Write-Host "Open Claude Code and type /book-genesis or /book-genesis-codex to start writing."
+Write-Host "Start a book from this folder:  python runner\cli.py init my-book --idea ""..."" --language en"
+Write-Host "Then:  run-phase (x3), book, approve, book.  Details: docs\runner.md"
 Write-Host ""

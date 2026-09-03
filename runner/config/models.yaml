@@ -1,0 +1,31 @@
+# Adapter and model per role. Adapters: claude (claude -p), codex (codex exec),
+# manual (write the prompt, stop), fake (tests only). Model aliases follow each CLI:
+# claude accepts opus / sonnet / haiku; codex uses its configured default when empty.
+#
+# The judge defaults to a different model family than the writer on purpose
+# (ADR 0001, decision 9): a system that grades its own prose has maximum bias.
+# Mechanical roles use the cheapest class that does the job.
+
+writer:
+  adapter: claude
+  model: opus
+
+disruptor:
+  adapter: claude
+  model: sonnet
+
+judge:
+  adapter: codex
+  model: ""
+
+editor:
+  adapter: claude
+  model: opus
+
+architect:
+  adapter: claude
+  model: opus
+
+extractor:
+  adapter: claude
+  model: haiku

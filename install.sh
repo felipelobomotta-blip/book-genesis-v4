@@ -20,7 +20,7 @@ NC='\033[0m'
 
 echo ""
 echo -e "${BLUE}Book Genesis${NC}"
-echo -e "${YELLOW}V4/V5 legacy system + portable Codex edition${NC}"
+echo -e "${YELLOW}Copies the agent templates and knowledge base to ~/.claude (optional: the runner reads them from this clone)${NC}"
 echo ""
 echo -e "${YELLOW}Installing skills, supporting references, agents, and knowledge base${NC}"
 echo ""
@@ -71,9 +71,9 @@ if [ -d "$AGENTS_DIR" ]; then
   done
 fi
 
-# Verify every subagent_type the orchestrator dispatches is actually installed.
-# A missing one stalls the pipeline mid-run, so fail loudly here instead.
-PIPELINE_AGENTS="book-researcher book-architect entity-tracker continuity-guardian book-writer dialogue-polish hook-craft book-disruptor book-evaluator book-editor book-packager"
+# Verify every template the runner reads is present (runner/chapter.py, runner/phases.py).
+# A missing one fails the runner closed, so fail loudly here instead.
+PIPELINE_AGENTS="book-researcher book-architect entity-tracker continuity-guardian book-writer book-disruptor book-judge book-evaluator book-editor book-packager"
 missing=""
 for agent in $PIPELINE_AGENTS; do
   if [ ! -f "$TARGET_AGENTS/$agent.md" ]; then
@@ -83,15 +83,15 @@ done
 
 echo ""
 if [ -n "$missing" ]; then
-  echo -e "${RED}Pipeline incomplete.${NC} The orchestrator dispatches agents that are not installed:"
+  echo -e "${RED}Pipeline incomplete.${NC} Templates the runner needs are not installed:"
   for agent in $missing; do
     echo -e "  ${RED}-${NC} $agent"
   done
   echo ""
-  echo "The book-orchestrator will stall when it reaches one of these."
+  echo "The runner fails closed when it reaches one of these."
   exit 1
 fi
-echo -e "${GREEN}Pipeline verified.${NC} All 11 orchestrator agents resolve."
+echo -e "${GREEN}Pipeline verified.${NC} All 10 runner templates resolve."
 
 echo ""
 echo -e "${GREEN}Done.${NC} $count skills + $agent_count agents + $kb_count knowledge files installed"
@@ -100,5 +100,6 @@ echo -e "Skills:    ${BLUE}$TARGET_SKILLS${NC}"
 echo -e "Agents:    ${BLUE}$TARGET_AGENTS${NC}"
 echo -e "Knowledge: ${BLUE}$TARGET_KNOWLEDGE${NC}"
 echo ""
-echo "Open Claude Code and type /book-genesis or /book-genesis-codex to start writing."
+echo "Start a book from this folder:  python runner/cli.py init my-book --idea \"...\" --language en"
+echo "Then:  run-phase (x3), book, approve, book.  Details: docs/runner.md"
 echo ""

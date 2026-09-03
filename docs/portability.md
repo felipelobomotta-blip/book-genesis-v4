@@ -2,10 +2,13 @@
 
 Book Genesis is agent-agnostic by design. It is a folder of markdown instructions, phase prompts, manifests, scoring rules, and file contracts. Any agent that can read files and write project artifacts can run it.
 
-The repository has two layers:
+> **2026-09-02 (ADR 0001):** the canonical way to run Book Genesis is now the Python runner (`docs/runner.md`), which drives the `claude` and `codex` CLIs. The notes below describe how the phase prompts can still be followed by hand in other agents; they are partly historical.
 
-1. The **Universal Book Genesis Core** in `skills/book-genesis-codex/`.
-2. The legacy Claude Code system in `skills/`, `agents/`, and `knowledge/`.
+The repository has three layers:
+
+1. The **runner** in `runner/` and the prompt templates in `agents/` (canonical).
+2. The phase prompts and manifest in `skills/book-genesis-codex/`, which the runner follows.
+3. Everything earlier, in `legacy/` (not maintained).
 
 The `book-genesis-codex` folder name is historical and kept for compatibility. It does not mean the pipeline only works in Codex.
 
@@ -53,10 +56,7 @@ Invocation:
 /book-genesis-codex
 ```
 
-The older commands remain available:
-
-- `/book-genesis` for the V5 Craft Mode orchestrator
-- `/book-genesis-full` for the full V4/V5 production pipeline
+The older commands (`/book-genesis`, `/book-genesis-full`) moved to `legacy/` on 2026-09-02 and are no longer installed.
 
 ## Codex
 

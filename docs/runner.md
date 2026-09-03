@@ -1,72 +1,101 @@
-# Local Runner
+# The Runner
 
-Book Genesis is still a markdown-first, agent-run workflow. The local runner exists to make the workflow reproducible: it scaffolds the project tree, prepares the active phase packet, validates required outputs, and advances gates.
+The runner is the orchestrator. It reads state, assembles prompts from project files, calls a model through a command-line adapter, validates what comes back, writes files, and advances. Models never get tools. This document is the operational reference; the reasoning is in [ADR 0001](adr/0001-runner-orquestra-juiz-cego.md).
 
-It does not call an LLM and it does not claim literary quality. Agents still write, audit, score, and package the manuscript using the active phase prompt.
+Run it from the repository root. It reads templates from `agents/` and phase prompts from `skills/book-genesis-codex/references/`, so a clone is required; the installer is not.
 
 ## Commands
 
 ```bash
-python runner/cli.py init my-book --idea "a detective audits a haunted manuscript"
-python runner/cli.py status my-book
-python runner/cli.py prepare-phase my-book
-python runner/cli.py advance-phase my-book
-python runner/cli.py validate my-book
-python runner/cli.py prepare-swarm my-book --mode hybrid --slug launch-reaction
-python runner/cli.py prepare-agent-packet my-book prose_writer
+python runner/cli.py init <project> --idea "..." --language en
+python runner/cli.py status <project>
+python runner/cli.py run-phase <project> [--fake-responses FILE]
+python runner/cli.py brief <project> <chapter>
+python runner/cli.py chapter <project> <chapter> [--fake-responses FILE]
+python runner/cli.py book <project> [--from N] [--to N] [--fake-responses FILE]
+python runner/cli.py approve <project> chapter-01
+python runner/cli.py judge <file.md> [--previous FILE] [--genre "..."] [--reader "..."] [--anchor FILE]
+                                     [--adapter claude|codex|fake] [--model NAME] [--out FILE]
+python runner/cli.py validate <project>
+python runner/cli.py demo <path>                 # deterministic file-contract demo, no model
 ```
 
-`prepare-phase` writes:
+`prepare-phase`, `advance-phase`, `prepare-swarm` and `prepare-agent-packet` remain for manual use and for the swarm and bestseller-studio contracts; the commands above are the canonical path.
 
-```text
-my-book/work/current-phase.md
-```
+### Exit codes
 
-That file contains the phase label, gate, required outputs, and the full active phase prompt from `skills/book-genesis-codex/references/`.
+| code | meaning |
+|---|---|
+| 0 | done |
+| 1 | failure (adapter error, missing file, phase outputs incomplete) |
+| 2 | usage |
+| 3 | awaiting a human: read `manuscript/chapters/chapter-01.md`, then `approve` |
+| 4 | blocked: the reader never turned the page within the genre's revision budget; best draft kept in `manuscript/drafts/` |
 
-`prepare-swarm` writes:
+## What one chapter does
 
-```text
-my-book/evaluations/book-swarm/<date>-launch-reaction/
-```
+1. `brief` assembles `briefs/chapter-NN.md` deterministically: the chapter's `## Chapter N` section from `artifacts/05-outline.md`, `artifacts/02-story-engine.md`, `artifacts/03-characters.md`, the last 300 words of the previous chapter, and the genre constants.
+2. The **writer** gets the brief and the writer template. It returns prose. Craft notes, preambles and fences are stripped before anything else sees the text.
+3. The **disruptor** runs when the genre profile says so (fiction by default; not for nonfiction).
+4. The **judge** gets prose plus the previous chapter's tail. Never the outline, never the foundation. It returns a fenced YAML block: `turn_page`, `stopped_at`, `remember`, `flags`, `vs_previous`, `vs_anchor`.
+5. If the reader would not turn the page, the **editor** runs in the modes the judge flagged, working from the best draft so far and the exact sentence where attention left the page. The judge then compares the new draft with the previous best. `worse` means the new draft is discarded.
+6. Accepted chapters go to `manuscript/chapters/chapter-NN.md`. Every draft and verdict stays in `manuscript/drafts/` and `evaluations/`.
+7. After chapter 1 is accepted, `book` and `chapter 2` refuse to continue until `approvals/chapter-01.approved` exists.
 
-That folder contains the Book Swarm Panel contract: persona roster, sample map, cohort reports, interviews, public-opinion report, risk heatmap, revision tickets, score calibration, summary, and an optional `mirofish-requirement.md` bridge file for external MiroFish runs.
+## Phases
 
-`prepare-agent-packet` writes:
+`run-phase` runs the current phase of the manifest through the `architect` role: the phase prompt, the project idea, the assumptions, and every artifact already written go into one prompt; the reply is split on `=== FILE: <path> ===` markers and only the files the phase requires are written. A `=== STATE ===` block updates `title`, `genre`, `audience`, `language` and `target_length` in `PROJECT_STATE.yaml`. The phase advances only when every required output exists and is not a template.
 
-```text
-my-book/work/agent-packets/prose_writer.md
-```
+Phase 3 (drafting) is never run by `run-phase`; it is `book` / `chapter`. Phases after drafting (adversarial audit, diagnostic score, editorial package) run through `run-phase` again, as diagnostics and deliverables, not as gates.
 
-That file contains the specialist mission, missing inputs, required outputs, gates, score floor, and relevant skill prompt from `skills/book-bestseller-studio/references/agent-registry.yaml`.
+## Configuration
 
-## Mechanical Demo
+`runner/config/models.yaml` maps each role (`writer`, `disruptor`, `judge`, `editor`, `architect`, `extractor`) to an adapter and a model alias. The default puts the judge on a different family than the writer.
 
-Use this before launch, CI, or a demo recording:
+`runner/config/genre-profiles.yaml` holds, per genre: words per chapter, dialogue share, maximum revision cycles, whether the disruptor runs, and the anti-AI pattern budget. Free-text genres from intake are mapped through the `aliases` block; unknown genres fall back to `default`.
+
+## Adapters
+
+| adapter | how | notes |
+|---|---|---|
+| `claude` | `claude -p --output-format text --model <alias>`, prompt on stdin | works from inside a Claude Code session |
+| `codex` | `codex exec --ignore-user-config --ephemeral -s read-only -o <file>`, prompt on stdin | `--ignore-user-config` skips the user's MCP servers and skills, which the judge does not need and which cost ~40 s and ~20k tokens per call |
+| `fake` | scripted responses from a file, separated by `=== NEXT ===` lines | tests only |
+
+No adapter reads or stores an API key. Both CLIs use the session already logged in on the machine.
+
+## Tests
 
 ```bash
-python runner/cli.py demo .tmp-book-genesis-demo
-python runner/cli.py status .tmp-book-genesis-demo
-python runner/cli.py validate .tmp-book-genesis-demo
+python -m pytest tests -q
 ```
 
-The demo fills deterministic placeholder outputs and advances all gates. It proves the file contract and phase mechanics, not manuscript quality.
+52 tests, no network: the judge parser and blindness, the genre constants, the brief, the chapter loop (editor only on a `no`, worse drafts discarded, revision budget, nonfiction skips the disruptor, craft notes never reach the manuscript, human checkpoint), the phases, the book loop, and the CLI by subprocess.
 
-## What The Runner Guarantees
+## Measured run (2026-09-02, Windows 11, subscriptions only)
 
-- `PROJECT_STATE.yaml` exists and tracks the current phase.
-- `ASSUMPTIONS.md`, `RUN_REPORT.md`, `artifacts/`, `manuscript/chapters/`, `evaluations/`, and `delivery/` exist.
-- Phase outputs must be replaced before `advance-phase` succeeds.
-- Phase 4 cannot be skipped because phase order is read from the manifest.
-- Book-swarm runs use a durable folder contract before clean-room simulation or external MiroFish import.
-- Specialist agents use packet files so worldbuilding, writing, pacing, continuity, scoring, packaging, and launch work have explicit ownership.
+Idea: *"Uma analista de plantão noturno em Brasília percebe que nove sistemas independentes do governo começaram a cometer exatamente os mesmos erros, no mesmo segundo, e ninguém mais acha isso estranho."* Language pt-BR. Roles as in `models.yaml` (architect and writer: claude opus; disruptor: claude sonnet; judge: codex default model).
 
-## What The Runner Does Not Do
+| step | result | wall clock |
+|---|---|---|
+| Phase 0 intake | ASSUMPTIONS.md + 3 artifacts; state updated (title *Nove Erros Idênticos*, genre thriller, 95k words) | 216 s |
+| Phase 1 foundation | characters, theme, emotional curve | 353 s |
+| Phase 2 architecture | outline (4 parts, 38 chapters, 12 documentary artifacts) + opening strategy | 306 s |
+| chapter 1 (`book`) | brief 30 KB assembled; writer + disruptor produced a 1,712-word chapter; blind judge: `turn_page: yes`, no flags, five remembered items; accepted on the first pass; runner stopped with exit 3 for the human checkpoint | 268 s (writer + disruptor ≈ 256 s, judge ≈ 12 s) |
 
-- It does not call Claude, Codex, Kimi, OpenAI, or any other model.
-- It does not generate real prose.
-- It does not score a manuscript by itself.
-- It does not run MiroFish. It prepares import/export files for an external MiroFish run when available.
-- It does not build EPUB/PDF files.
+The first `book` run had failed closed in 0 s: the architect had written chapters as bold lines (`**Capítulo 1 — 3h14**`), not headings. Two fixes followed, both kept: the architecture prompt now states the heading contract, and the runner also accepts bold chapter markers in English and Portuguese (tests `test_bold_portuguese_chapter_markers_are_understood`, `test_counts_bold_portuguese_markers_too`). The second run went through.
 
-Those steps belong to the agent executing the phase prompt.
+What the judge remembered from chapter 1, verbatim from `evaluations/chapter-01-judge-1.md`: *"Aconteceu nos nove. No mesmo pixel."*; Rita covering the other timestamps with her hand to read 412 nine times; Nelson's coat, nineteen years later, with the cigarette burn; the March ticket already marked resolved; Rita counting the cursor's blinks. No craft notes, runner contract text or undecodable characters reached the manuscript.
+
+One accepted chapter read by one model judge is a smoke test, not a validation. The claim this repository can make today is narrower than before and true: the pipeline runs end to end on this machine, from one sentence to a judged chapter, with every draft and verdict on disk.
+
+## Known issues
+
+- On Windows, a long `claude -p` reply occasionally contains a byte pair that is not valid UTF-8 (measured once: 2 characters in ~30k bytes of a 3-minute intake reply; short replies and the JSON format were clean in a direct test). The adapter keeps the text and prints a warning with the count; search the artifact for `�` and fix by hand or re-run the phase.
+
+## What the runner does not do
+
+- It does not build EPUB or PDF files; the packager template writes specifications and copy.
+- It does not run market research inside `run-phase`; `agents/book-researcher.md` is only available as a subagent for now.
+- It does not run the reader swarm; `prepare-swarm` only lays out the folder contract.
+- It does not validate anything with human readers. A model reader is a cheaper, less biased signal than self-grading and still not external validation.

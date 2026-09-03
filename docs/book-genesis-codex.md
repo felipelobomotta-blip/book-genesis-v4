@@ -1,5 +1,7 @@
 # Universal Book Genesis Core
 
+> **2026-09-02 (ADR 0001):** the phase prompts in this folder are now executed by the runner (`python runner/cli.py run-phase`), not by an agent holding tools. Drafting and the quality gate are described in [`runner.md`](runner.md) and [ADR 0001](adr/0001-runner-orquestra-juiz-cego.md). The 10-dimension Genesis Score below is kept as a diagnostic, not as the gate. Passages about `/book-genesis-codex` as a Claude Code command or about V4/V5 defaults are historical.
+
 The Universal Book Genesis Core is the portable, reduced-pressure version of Book Genesis. It works in Claude Code, Codex, Antigravity, Kimi, and other agents that can read files and maintain project state.
 
 The implementation lives at:
@@ -26,7 +28,7 @@ tests/
   test_runner.py
 ```
 
-The runner scaffolds projects, prepares phase packets, validates required files, advances gates, prepares optional Book Swarm Panel/MiroFish bridge folders, and writes specialist agent packets for Book Bestseller Studio. It does not call a model or generate real prose.
+The runner scaffolds projects, runs each phase through a model adapter (`claude` or `codex` CLI), validates required files, advances gates, writes and judges chapters, and still prepares the optional Book Swarm Panel/MiroFish bridge folders and the Book Bestseller Studio agent packets. See `runner.md`; the runner modules are `cli.py`, `phases.py`, `brief.py`, `chapter.py`, `book.py`, `judge.py`, `adapters.py`, `constants.py`, `roles.py`.
 
 The folder name `book-genesis-codex` is historical and preserved so existing commands and installs keep working. The product positioning is broader: **Book Genesis is a universal book pipeline for AI agents.**
 

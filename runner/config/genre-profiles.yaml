@@ -1,0 +1,102 @@
+# Single source of truth for genre constants. Prompts reference these values;
+# they never restate them. Ranges come from knowledge/bestseller-dna.md
+# (chapter length by genre, dialogue share by genre) and from the revision
+# policy in docs/adr/0001-runner-orquestra-juiz-cego.md.
+
+default:
+  words_per_chapter_min: 2000
+  words_per_chapter_max: 4500
+  dialogue_min_pct: 20
+  dialogue_max_pct: 40
+  max_revision_cycles: 3
+  disruptor_default: true
+  ai_pattern_budget_per_1k: 2.0
+
+literary:
+  words_per_chapter_min: 2500
+  words_per_chapter_max: 5000
+  dialogue_min_pct: 15
+  dialogue_max_pct: 35
+  max_revision_cycles: 3
+  disruptor_default: true
+  ai_pattern_budget_per_1k: 1.5
+
+thriller:
+  words_per_chapter_min: 1500
+  words_per_chapter_max: 3500
+  dialogue_min_pct: 30
+  dialogue_max_pct: 50
+  max_revision_cycles: 3
+  disruptor_default: true
+  ai_pattern_budget_per_1k: 2.0
+
+memoir:
+  words_per_chapter_min: 2500
+  words_per_chapter_max: 4500
+  dialogue_min_pct: 10
+  dialogue_max_pct: 30
+  max_revision_cycles: 3
+  disruptor_default: true
+  ai_pattern_budget_per_1k: 1.5
+
+romance:
+  words_per_chapter_min: 2500
+  words_per_chapter_max: 4000
+  dialogue_min_pct: 30
+  dialogue_max_pct: 45
+  max_revision_cycles: 3
+  disruptor_default: true
+  ai_pattern_budget_per_1k: 2.0
+
+fantasy:
+  words_per_chapter_min: 3000
+  words_per_chapter_max: 5500
+  dialogue_min_pct: 25
+  dialogue_max_pct: 40
+  max_revision_cycles: 3
+  disruptor_default: true
+  ai_pattern_budget_per_1k: 2.0
+
+scifi:
+  words_per_chapter_min: 3000
+  words_per_chapter_max: 5000
+  dialogue_min_pct: 25
+  dialogue_max_pct: 40
+  max_revision_cycles: 3
+  disruptor_default: true
+  ai_pattern_budget_per_1k: 2.0
+
+nonfiction:
+  words_per_chapter_min: 3000
+  words_per_chapter_max: 6000
+  dialogue_min_pct: 0
+  dialogue_max_pct: 15
+  max_revision_cycles: 2
+  disruptor_default: false
+  ai_pattern_budget_per_1k: 1.0
+
+# Free-text genre labels (from intake) mapped onto a profile key. Lower case.
+aliases:
+  literary fiction: literary
+  upmarket: literary
+  literario: literary
+  literário: literary
+  suspense: thriller
+  crime: thriller
+  mystery: thriller
+  policial: thriller
+  science fiction: scifi
+  sci fi: scifi
+  sf: scifi
+  ficção científica: scifi
+  ficcao cientifica: scifi
+  fantasia: fantasy
+  epic fantasy: fantasy
+  non fiction: nonfiction
+  nonfiction: nonfiction
+  não ficção: nonfiction
+  nao ficcao: nonfiction
+  memoir: memoir
+  memórias: memoir
+  memorias: memoir
+  autobiography: memoir

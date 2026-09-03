@@ -1,5 +1,21 @@
 # Changelog
 
+## V5.0 — 2026-09-02 (branch `arch/runner-orchestrates`, unreleased)
+
+### Changed: the runner orchestrates; the judge is blind
+
+Recorded in `docs/adr/0001-runner-orquestra-juiz-cego.md`, motivated by the line-by-line review in `docs/REVISAO-CONSISTENCIA-2026-09.md` (three pipelines, four gate definitions and three rubrics coexisting; the 8.5 gate was self-grading; the last real project had seven chapters and zero evaluations).
+
+- `runner/` now calls models through the local `claude` and `codex` CLIs (no API keys anywhere) and runs the whole pipeline: `run-phase` for phases 0–2 and the post-draft diagnostics, `book` / `chapter` for drafting, `judge` for any chapter file, `approve` for the human checkpoint.
+- New `agents/book-judge.md`: a blind reader that sees prose only (plus the previous chapter's tail) and answers `turn_page`, `stopped_at`, `remember`, `flags`; after an edit it compares drafts (`better` / `worse` / `same`). There is no numeric gate any more.
+- The writer template no longer teaches the rubric; `agents/book-evaluator.md` is a diagnostic for the editor, not a gate.
+- `dialogue-polish` and `hook-craft` became modes of `agents/book-editor.md`, run only when the judge flags them. `book-orchestrator` became code.
+- Constants centralised in `runner/config/genre-profiles.yaml` and `runner/config/models.yaml`; the judge defaults to a different model family than the writer.
+- A human must approve chapter 1 (`approve <project> chapter-01`) before chapter 2 is written.
+- Three earlier pipelines (`skills/book-genesis-full`, `skills/book-genesis`, `skills/optional`, `skills/deprecated`, the orchestrator agent, `docs/architecture.md`) moved, not deleted, to `legacy/`.
+- Mechanical fixes from the review (README duplicates, loop max 3 vs 5, dimension 7 never set, `grep -P`, destructive `sed`, taxonomy of structural types, dialogue range).
+- Tests: 12 → 52, no network.
+
 ## V4.2 — 2026-06-10
 
 ### Added: Premise Forge (Phase 1.5)

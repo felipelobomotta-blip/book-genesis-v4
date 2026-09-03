@@ -158,6 +158,10 @@ def load_state_summary(target: Path) -> Dict[str, str]:
     text = (target / "PROJECT_STATE.yaml").read_text(encoding="utf-8")
     return {
         "title": _extract_scalar(text, "title"),
+        "idea": _extract_scalar(text, "idea"),
+        "language": _extract_scalar(text, "language"),
+        "genre": _extract_scalar(text, "genre"),
+        "audience": _extract_scalar(text, "audience"),
         "adapter": _extract_scalar(text, "adapter"),
         "model_name": _extract_scalar(text, "model_name"),
         "current_phase": _extract_scalar(text, "current_phase"),
@@ -514,6 +518,11 @@ def _project_state_template(
     )
 
 
+def update_state_value(path: Path, key: str, value: str) -> None:
+    """Public entry point: set the first ``key:`` scalar found in PROJECT_STATE.yaml."""
+    _update_state_value(path, key, value.replace('"', "'"))
+
+
 def _update_state_value(path: Path, key: str, value: str) -> None:
     lines = path.read_text(encoding="utf-8").splitlines()
     prefix = f"{key}:"
@@ -557,6 +566,11 @@ def _infer_family(model_name: str) -> str:
     if "kimi" in normalized:
         return "kimi"
     return "unknown"
+
+
+def load_simple_yaml_map(path: Path) -> Dict[str, Dict[str, object]]:
+    """Public entry point for the two-level YAML subset used by manifests and config."""
+    return _load_simple_yaml_map(path)
 
 
 def _load_simple_yaml_map(path: Path) -> Dict[str, Dict[str, object]]:

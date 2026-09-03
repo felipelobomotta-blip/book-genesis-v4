@@ -1,6 +1,6 @@
 # FAQ -- Book Genesis
 
-> Current note: the default workflow for new projects is the Universal Book Genesis Core in `skills/book-genesis-codex/`. The folder name is historical; the workflow is designed for Claude Code, Codex, Antigravity, Kimi, and other file-aware agents. The older V4/V5 answers below are kept for historical and legacy Claude Code usage.
+> Current note (2026-09-02): the default workflow is the Python runner (`README.md`, `docs/runner.md`): it drives the `claude` and `codex` CLIs, judges every chapter blind, and stops for a human after chapter 1. There is no numeric quality gate any more (ADR 0001). The V4/V5 answers below (17 phases, Genesis Score as a gate, CVI, `/book-genesis` commands) describe material that now lives in `legacy/` and are kept for history.
 
 ---
 
