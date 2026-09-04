@@ -16,18 +16,32 @@ CONFIG_DIR = Path(__file__).resolve().parent / "config"
 GENRE_PROFILES_PATH = CONFIG_DIR / "genre-profiles.yaml"
 MODELS_PATH = CONFIG_DIR / "models.yaml"
 ADAPTERS_PATH = CONFIG_DIR / "adapters.yaml"
+USER_ADAPTERS_ENV = "BOOK_GENESIS_ADAPTERS"
+
+
+def user_adapters_path() -> Path:
+    """Where a person declares their own model CLI without editing the repository."""
+    import os
+
+    override = os.environ.get(USER_ADAPTERS_ENV, "")
+    return Path(override) if override else Path.home() / ".book-genesis" / "adapters.yaml"
 
 
 def load_generic_adapters() -> Dict[str, str]:
-    """``{adapter name: command template}`` from adapters.yaml; empty when the file has no entries."""
-    if not ADAPTERS_PATH.exists():
-        return {}
-    entries = load_simple_yaml_map(ADAPTERS_PATH)
+    """``{adapter name: command template}``: the repository's adapters.yaml, then the
+    person's own ``~/.book-genesis/adapters.yaml`` on top (ADR 0010).
+
+    Same shape as models.yaml versus ~/.book-genesis/config.yaml: a repository default that
+    a person can extend or override without a fork and without a merge conflict on update.
+    """
     templates: Dict[str, str] = {}
-    for name, values in entries.items():
-        command = str(values.get("command", "")).strip()
-        if command:
-            templates[name.strip().lower()] = command
+    for path in (ADAPTERS_PATH, user_adapters_path()):
+        if not path.exists():
+            continue
+        for name, values in load_simple_yaml_map(path).items():
+            command = str(values.get("command", "")).strip()
+            if command:
+                templates[name.strip().lower()] = command
     return templates
 
 ROLES = ("writer", "disruptor", "judge", "editor", "architect", "extractor")

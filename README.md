@@ -31,7 +31,17 @@ Chapter 1 is read by a **panel** of blind readers before the book goes on: diffe
 **Step 1 — Requirements**
 
 - Python 3.10 or newer. One package, `rich`, for the interface; `pip install -e .` brings it. Without it the runner still works and prints plain lines.
-- A way to run models, any one of these: an API key for OpenRouter, DeepSeek, Anthropic, OpenAI, Groq or Together; a local server (Ollama, LM Studio); [Claude Code](https://claude.ai/code) (`claude`) or the [Codex CLI](https://github.com/openai/codex) (`codex`) already logged in; any other command-line tool declared in `runner/config/adapters.yaml`; or nothing at all with `--manual`, which writes every prompt to a file and waits for you to paste the reply from any chat. Two families is better: the writer and the judge then disagree in useful ways. One family works, with a `single family` warning in the run report.
+- A way to run models. Whatever you already have works:
+
+| What you have | How it connects |
+|---|---|
+| A Claude or ChatGPT subscription | [Claude Code](https://claude.ai/code) (`claude`) or the [Codex CLI](https://github.com/openai/codex) (`codex`), already logged in. No key. |
+| An API key | OpenRouter, DeepSeek, Anthropic, OpenAI, **Gemini**, Groq, Together, or any OpenAI-compatible endpoint. Typed hidden, or read from your environment. |
+| A local server | Ollama, LM Studio. |
+| Another agent CLI | Antigravity (`agy`), Hermes, opencode: two lines in `~/.book-genesis/adapters.yaml`, no fork. |
+| Nothing at all | `--manual` writes every prompt to a file and waits for you to paste the reply from any chat window. |
+
+  **Two families beat one.** The writer and the judge then disagree in useful ways. One family still works, and the runner says so in the report instead of pretending. If you only have one, a **Gemini API key is free** (a Google account, no card, the Flash models cost nothing) and gives you a second family in a minute.
 
 **Step 2 — Install the command and choose your providers**
 
@@ -45,7 +55,18 @@ book-genesis doctor              # shows what will run where, and whether every 
 
 `setup` works the way OpenClaw, Hermes and opencode onboard you. It first looks at what this machine can already run (Claude Code or Codex logged in, API keys in your environment, an Ollama or LM Studio server answering) and offers a one-keystroke **quick start** with what it found. Or you choose by number: your Claude or ChatGPT subscription through the OAuth login of their CLIs, OpenRouter, DeepSeek, Anthropic, OpenAI, Groq, Together, a local server, any other compatible endpoint. Keys are typed hidden or read from an environment variable. Models come as a numbered list fetched live from the provider. Nothing is saved until one real completion has come back from the writer and from the judge. Re-running it later offers keep, change or reset, never a silent wipe.
 
-It writes `~/.book-genesis/config.yaml` and nothing else; a key never enters the repository, a prompt, or a log. Skip the install if you prefer: `python -m runner ...` and `python runner/cli.py ...` are the same program.
+It writes `~/.book-genesis/config.yaml` and nothing else; a key never enters the repository, a prompt, or a log. Skip the install if you prefer: `python -m runner ...` is the same program.
+
+**Have an agent CLI that isn't in the list?** Declare it in `~/.book-genesis/adapters.yaml` and it becomes a provider like any other. Two bridges ship ready:
+
+```yaml
+agy:
+  command: python runner/bridge_antigravity.py {model}
+hermes:
+  command: python runner/bridge_hermes.py {model}
+```
+
+Any command that reads a prompt on stdin and writes the reply on stdout works the same way. That file is yours: it is read on top of the repository's defaults, so an update never conflicts with it.
 
 **Step 3 — Give it an idea**
 
