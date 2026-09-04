@@ -32,7 +32,28 @@ class ChatModelsOnlyTests(unittest.TestCase):
 
     def test_gemini_is_not_a_mini_and_gemma_stays(self) -> None:
         raw = ["gemini-3.1-pro-preview", "gemini-3.8-flash", "gemma-4-31b-it", "gemini-3.1-flash-image"]
-        self.assertEqual(["gemini-3.8-flash", "gemma-4-31b-it"], chat_models_only(raw))
+        self.assertEqual(["gemini-3.1-pro-preview", "gemini-3.8-flash", "gemma-4-31b-it"], chat_models_only(raw))
+
+    def test_real_gemini_catalog_keeps_the_flagship_preview_and_drops_the_rest(self) -> None:
+        # Ids as Google's /models returned them on 2026-09-04 (subset). 3.1 Pro exists only as
+        # "-preview"; 3.5 Flash exists both ways, so only the plain one stays.
+        raw = [
+            "gemini-3.1-pro-preview", "gemini-3.1-pro-preview-customtools", "gemini-3.5-flash-preview", "gemini-3.5-flash",
+            "gemini-2.5-flash-preview-tts", "gemini-3.1-flash-live-preview", "nano-banana-pro-preview",
+            "gemini-robotics-er-2-preview", "gemini-3.5-live-translate-preview", "gemini-embedding-2", "gemini-3.8-flash",
+        ]
+        self.assertEqual(["gemini-3.1-pro-preview", "gemini-3.5-flash", "gemini-3.8-flash"], chat_models_only(raw))
+
+
+class SecondFamilyDetectionTests(unittest.TestCase):
+    def test_a_gemini_key_in_the_environment_is_a_detected_provider(self) -> None:
+        from runner.onboarding import Detection, detect_environment, quick_plan
+
+        found = detect_environment(available={"claude": True, "codex": False}, env={"GEMINI_API_KEY": "AQ.x"}, probe=lambda url: False)
+        self.assertIn(Detection("gemini-api", "api", "Gemini API", "key in GEMINI_API_KEY"), found)
+        plan = quick_plan(found)
+        self.assertEqual(("claude", "gemini-api"), (plan.writer.key, plan.judge.key))
+        self.assertFalse(plan.single_family)
 
 
 class SortModelsTests(unittest.TestCase):

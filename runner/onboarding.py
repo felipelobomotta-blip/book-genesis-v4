@@ -26,6 +26,7 @@ ENV_KEYS: Dict[str, str] = {
     "ANTHROPIC_API_KEY": "anthropic",
     "OPENAI_API_KEY": "openai",
     "DEEPSEEK_API_KEY": "deepseek",
+    "GEMINI_API_KEY": "gemini-api",
     "GROQ_API_KEY": "groq",
     "TOGETHER_API_KEY": "together",
 }
@@ -40,6 +41,7 @@ API_LABELS = {
     "anthropic": "Anthropic",
     "openai": "OpenAI",
     "deepseek": "DeepSeek",
+    "gemini-api": "Gemini API",
     "groq": "Groq",
     "together": "Together",
     "ollama": "Ollama (local)",
@@ -159,11 +161,14 @@ from pathlib import Path
 # provider-specific variants). Whole tokens, so "gemini" never trips on "mini".
 _NON_CHAT_TOKENS = {
     "embedding", "embeddings", "tts", "whisper", "dall", "dalle", "image", "audio", "realtime",
-    "moderation", "transcribe", "transcription", "search", "sora", "vision", "safeguard", "cyber",
-    "instruct", "batch", "free", "davinci", "babbage", "curie", "ada", "lyria", "veo", "imagen",
-    "exp", "preview",
+    "moderation", "transcribe", "transcription", "translate", "live", "search", "sora", "vision",
+    "safeguard", "cyber", "instruct", "batch", "free", "davinci", "babbage", "curie", "ada", "lyria",
+    "veo", "imagen", "banana", "robotics", "customtools",
 }
 _DATE_SUFFIX = re.compile(r"[-_](\d{4}-\d{2}-\d{2}|\d{8}|\d{4})$")
+# Google ships flagships as "-preview" for months (gemini-3.1-pro-preview has no plain twin), so
+# preview/exp ids stay unless the same id exists without the suffix.
+_VARIANT_SUFFIX = re.compile(r"-(preview|exp)$")
 _VERSION = re.compile(r"\d+(?:\.\d+)?")
 CACHE_TTL_SECONDS = 7 * 24 * 3600
 DEFAULT_CACHE_PATH = Path.home() / ".book-genesis" / "models-cache.json"
@@ -186,7 +191,7 @@ def chat_models_only(ids: List[str]) -> List[str]:
     undated = set(kept)
     result: List[str] = []
     for model_id in kept:
-        stripped = _DATE_SUFFIX.sub("", model_id)
+        stripped = _VARIANT_SUFFIX.sub("", _DATE_SUFFIX.sub("", model_id))
         if stripped != model_id and stripped in undated:
             continue
         result.append(model_id)

@@ -42,7 +42,12 @@ BOTH_CLIS = [
     Detection("claude", "cli", "Claude Code", "on PATH"),
     Detection("codex", "cli", "Codex CLI", "on PATH"),
 ]
-ONE_KEY = [Detection("openrouter", "api", "OpenRouter", "OPENROUTER_API_KEY")]
+ONE_KEY = [Detection("openrouter", "api", "OpenRouter", "key in OPENROUTER_API_KEY")]
+CODEX_ONLY = Detection("codex", "cli", "Codex CLI", "on PATH")
+CLAUDE_AND_GEMINI_KEY = [
+    Detection("claude", "cli", "Claude Code", "on PATH"),
+    Detection("gemini-api", "api", "Gemini API", "key in GEMINI_API_KEY"),
+]
 
 # What the probe found on the machine this was written on (2026-09-03): Claude Code took the
 # Claude 5 ids and the aliases but not fable; Codex took gpt-5.5 and gpt-5.4 and nothing else.
@@ -131,10 +136,45 @@ class QuickStartTests(unittest.TestCase):
         self.assertFalse(self.path.exists())
         self.assertIn("401", io.transcript)
 
-    def test_single_provider_warns_that_it_will_judge_itself(self) -> None:
+    def test_single_provider_warns_that_it_will_judge_itself_and_names_the_free_fix(self) -> None:
         io = ScriptedIO(answers=["1"])
         run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=ONE_KEY, verifier=always_ok, prober=probed)
         self.assertIn("single family", io.transcript.lower())
+        self.assertIn("Gemini API key from Google AI Studio", io.transcript)
+        self.assertNotIn("API key for openrouter", io.transcript)  # detected in the environment: never asked
+        self.assertIn("api_key_env: OPENROUTER_API_KEY", self.path.read_text(encoding="utf-8"))
+
+    def test_codex_alone_judges_on_the_sibling_model(self) -> None:
+        io = ScriptedIO(answers=["1"])
+        run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[CODEX_ONLY], verifier=always_ok, prober=probed)
+        config = load_user_config(self.path)
+        self.assertEqual(("codex", "gpt-5.5"), (config.roles["writer"].adapter, config.roles["writer"].model))
+        self.assertEqual(("codex", "gpt-5.4"), (config.roles["judge"].adapter, config.roles["judge"].model))
+        self.assertIn("gpt-5.4 reads what gpt-5.5 wrote", io.transcript)
+
+    def test_codex_alone_falls_back_to_one_model_when_the_sibling_is_refused(self) -> None:
+        io = ScriptedIO(answers=["1"])
+
+        def only_55(adapter_name, model, provider):
+            return (True, "OK") if model == "gpt-5.5" else (False, "codex exited 1: unknown model")
+
+        run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[CODEX_ONLY], verifier=only_55, prober=probed)
+        config = load_user_config(self.path)
+        self.assertEqual("gpt-5.5", config.roles["judge"].model)
+        self.assertIn("falls back to gpt-5.5", io.transcript)
+        self.assertIn("the very model that wrote the prose", io.transcript)
+
+    def test_claude_plus_a_gemini_key_in_env_is_two_families_and_asks_nothing(self) -> None:
+        io = ScriptedIO(answers=["1"])
+        run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=CLAUDE_AND_GEMINI_KEY, verifier=always_ok, prober=probed)
+        config = load_user_config(self.path)
+        self.assertEqual(("claude", "claude-opus-5"), (config.roles["writer"].adapter, config.roles["writer"].model))
+        self.assertEqual(("gemini-api", "gemini-3.8-flash"), (config.roles["judge"].adapter, config.roles["judge"].model))
+        self.assertEqual("GEMINI_API_KEY", config.providers["gemini-api"].api_key_env)
+        self.assertEqual("https://generativelanguage.googleapis.com/v1beta/openai", config.providers["gemini-api"].base_url)
+        self.assertNotIn("API key for", io.transcript)
+        self.assertNotIn("single family", io.transcript.lower())
+        self.assertEqual({"claude", "gemini-api"}, {seat.adapter for seat in config.panel})
 
 
 class CustomSetupTests(unittest.TestCase):
@@ -161,7 +201,7 @@ class CustomSetupTests(unittest.TestCase):
 
     def test_blank_key_falls_back_to_the_environment_variable(self) -> None:
         # 2 = custom; 3 = openrouter; model; judge = last option (same as writing); judge model.
-        io = ScriptedIO(answers=["2", "3", "some-model", "13", ""], secrets=[""])
+        io = ScriptedIO(answers=["2", "3", "some-model", "14", ""], secrets=[""])
         run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[], verifier=always_ok, lister=no_models, prober=probed)
         text = self.path.read_text(encoding="utf-8")
         self.assertIn("api_key_env: OPENROUTER_API_KEY", text)
@@ -175,7 +215,7 @@ class CustomSetupTests(unittest.TestCase):
             return ["deepseek-chat", "deepseek-v3.2", "deepseek-v4-pro", "deepseek-v4-flash-vision-exp", "deepseek-chat:batch"]
 
         # 2 = custom; 4 = deepseek; writer model 2; judge 13 = same; judge model 1.
-        io = ScriptedIO(answers=["2", "4", "2", "13", "1"], secrets=["sk-ds"])
+        io = ScriptedIO(answers=["2", "4", "2", "14", "1"], secrets=["sk-ds"])
         run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[], verifier=always_ok, lister=lister, prober=probed)
 
         transcript = io.transcript
@@ -191,9 +231,29 @@ class CustomSetupTests(unittest.TestCase):
         self.assertEqual(("openai", "https://api.deepseek.com/v1", "sk-ds"), seen[0])
         self.assertNotIn("sk-ds", transcript)
 
+    def test_gemini_api_is_in_the_menu_with_the_free_flash_as_default(self) -> None:
+        def lister(provider_type, base_url, api_key):
+            return ["gemini-3.1-pro-preview", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.5-flash-preview-tts", "gemini-3.1-flash-image"]
+
+        # 2 = custom; 5 = Gemini API; writer model 1 (recommended flash); judge 14 = same; judge model 3.
+        io = ScriptedIO(answers=["2", "5", "1", "14", "3"], secrets=["AQ.secret"])
+        run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[], verifier=always_ok, lister=lister, prober=probed)
+        transcript = io.transcript
+        self.assertIn("5) Gemini API (free key from Google AI Studio, no card; Flash models are free)", transcript)
+        self.assertIn("1) gemini-3.8-flash  (cheaper, fine for mechanical roles, recommended)", transcript)
+        self.assertIn("2) gemini-3.5-flash  (cheaper, fine for mechanical roles)", transcript)  # newest first
+        self.assertIn("3) gemini-3.1-pro-preview  (pricier, the strongest for writing a book)", transcript)
+        self.assertNotIn("tts", transcript)
+        self.assertNotIn("flash-image", transcript)
+        self.assertNotIn("AQ.secret", transcript)
+        config = load_user_config(self.path)
+        self.assertEqual("gemini-3.8-flash", config.roles["writer"].model)
+        self.assertEqual("gemini-3.1-pro-preview", config.roles["judge"].model)
+        self.assertEqual("AQ.secret", config.providers["gemini-api"].api_key)
+
     def test_claude_models_are_the_probed_ids_with_versions_and_oauth_help_when_missing(self) -> None:
         # 2 = custom; 1 = claude (not detected -> OAuth help); writer model 2; judge 13 = same; judge model 1.
-        io = ScriptedIO(answers=["2", "1", "2", "13", "1"])
+        io = ScriptedIO(answers=["2", "1", "2", "14", "1"])
         run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[], verifier=always_ok, lister=no_models, prober=probed)
         transcript = io.transcript
         self.assertIn("1) claude-opus-5  (pricier, the strongest for writing a book, recommended)", transcript)
@@ -207,26 +267,27 @@ class CustomSetupTests(unittest.TestCase):
         self.assertIn("npm install -g @anthropic-ai/claude-code", transcript)
 
     def test_codex_models_are_the_probed_ids_not_a_blank_prompt(self) -> None:
-        # 2 = custom; 2 = codex; writer model 1; judge 13 = same; judge model 2.
-        io = ScriptedIO(answers=["2", "2", "1", "13", "2"])
+        # 2 = custom; 2 = codex; writer model 1; judge 14 = same; judge model 1 (the sibling is recommended).
+        io = ScriptedIO(answers=["2", "2", "1", "14", "1"])
         run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[], verifier=always_ok, lister=no_models, prober=probed)
         transcript = io.transcript
-        self.assertIn("1) gpt-5.5  (best cost/quality balance, recommended)", transcript)
-        self.assertIn("2) gpt-5.4  (best cost/quality balance)", transcript)
+        self.assertIn("1) gpt-5.5  (best cost/quality balance, recommended)", transcript)  # writing
+        self.assertIn("1) gpt-5.4  (best cost/quality balance, recommended)", transcript)  # judging: never the writer itself
+        self.assertIn("2) gpt-5.5  (best cost/quality balance)", transcript)
         self.assertNotIn("gpt-5.5-mini", transcript)
         config = load_user_config(self.path)
         self.assertEqual("gpt-5.5", config.roles["writer"].model)
         self.assertEqual("gpt-5.4", config.roles["judge"].model)
 
     def test_a_cli_that_probes_nothing_still_offers_the_aliases(self) -> None:
-        io = ScriptedIO(answers=["2", "1", "1", "13", "1"])
+        io = ScriptedIO(answers=["2", "1", "1", "14", "1"])
         run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[], verifier=always_ok, lister=no_models, prober=nothing_probed)
         transcript = io.transcript
         self.assertIn("opus  (alias: always the newest Opus)", transcript)
         self.assertIn("Type another model id", transcript)
 
     def test_each_role_gets_one_line_of_guidance_before_the_list(self) -> None:
-        io = ScriptedIO(answers=["2", "1", "1", "13", "1"])
+        io = ScriptedIO(answers=["2", "1", "1", "14", "1"])
         run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[], verifier=always_ok, lister=no_models, prober=probed)
         transcript = io.transcript
         self.assertIn("The writer is where the prose comes from", transcript)
