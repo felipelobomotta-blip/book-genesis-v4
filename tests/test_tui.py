@@ -7,7 +7,8 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from runner.tui import apply_key, banner, supports_interactive  # type: ignore  # noqa: E402
+from runner.tui import apply_key, banner, physical_rows, supports_interactive  # type: ignore  # noqa: E402
+from runner.tui import strip_ansi as module_strip_ansi  # type: ignore  # noqa: E402
 
 
 def strip_ansi(text: str) -> str:
@@ -63,6 +64,35 @@ class BannerTests(unittest.TestCase):
         colored = banner(color=True)
         self.assertNotEqual(plain, colored)
         self.assertEqual(plain, strip_ansi(colored))
+
+
+class PhysicalRowsTests(unittest.TestCase):
+    """The bug seen in the first live run: a label longer than the terminal is wide wraps onto
+    a second row, and a redraw that moves up by logical lines comes back one row short."""
+
+    def test_a_short_line_is_one_row(self) -> None:
+        self.assertEqual(1, physical_rows("hello", 80))
+
+    def test_a_line_exactly_as_wide_as_the_terminal_is_still_one_row(self) -> None:
+        self.assertEqual(1, physical_rows("x" * 80, 80))
+
+    def test_one_character_more_wraps_onto_a_second_row(self) -> None:
+        self.assertEqual(2, physical_rows("x" * 81, 80))
+
+    def test_the_label_from_the_live_run_wraps_in_a_narrow_terminal(self) -> None:
+        label = "  > ChatGPT / Codex subscription (OAuth through the Codex CLI, no key) [detected]"
+        self.assertEqual(2, physical_rows(label, 60))
+        self.assertEqual(1, physical_rows(label, 120))
+
+    def test_color_codes_take_no_space(self) -> None:
+        colored = "\x1b[36m>\x1b[0m " + "\x1b[1m" + "x" * 78 + "\x1b[0m"
+        self.assertEqual(1, physical_rows(colored, 80))
+
+    def test_an_empty_line_is_one_row(self) -> None:
+        self.assertEqual(1, physical_rows("", 80))
+
+    def test_strip_ansi_removes_cursor_and_color_codes(self) -> None:
+        self.assertEqual("abc", module_strip_ansi("\x1b[3A\x1b[2K\x1b[36mabc\x1b[0m"))
 
 
 class SupportsInteractiveTests(unittest.TestCase):

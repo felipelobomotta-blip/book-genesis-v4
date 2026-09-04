@@ -39,7 +39,7 @@ class Preset:
 # The provider menu, in the order it is shown. The numbers/positions are part of the interface.
 MENU: List[Preset] = [
     Preset("claude", "Claude subscription (OAuth through the Claude Code CLI, no key)", "cli", "", "", "opus", "sonnet", needs_key=False),
-    Preset("codex", "ChatGPT / Codex subscription (OAuth through the Codex CLI, no key)", "cli", "", "", "", "", needs_key=False),
+    Preset("codex", "ChatGPT / Codex subscription (OAuth through the Codex CLI, no key)", "cli", "", "", "gpt-5.5", "gpt-5.5", needs_key=False),
     Preset("openrouter", "OpenRouter", "openai", "https://openrouter.ai/api/v1", "OPENROUTER_API_KEY", "anthropic/claude-sonnet-4.5", "deepseek/deepseek-chat"),
     Preset("deepseek", "DeepSeek", "openai", "https://api.deepseek.com/v1", "DEEPSEEK_API_KEY", "deepseek-chat", "deepseek-chat"),
     Preset("anthropic", "Anthropic", "anthropic", "https://api.anthropic.com", "ANTHROPIC_API_KEY", "claude-sonnet-5", "claude-sonnet-5"),
@@ -53,12 +53,41 @@ MENU: List[Preset] = [
 ]
 BY_KEY = {preset.key: preset for preset in MENU}
 MAIN_ROLES = ("writer", "editor", "architect", "disruptor", "extractor")
-CLI_MODELS = {"claude": ["opus", "sonnet", "haiku"], "codex": []}
+# gpt-5.5 is what this machine's Codex CLI reported as its default in a real `codex exec` run;
+# nothing else is listed for it because nothing else was verified. "Type another model id" stays.
+CLI_MODELS = {"claude": ["opus", "sonnet", "haiku"], "codex": ["gpt-5.5"]}
 OAUTH_HELP = {
     "claude": "Install Claude Code (`npm install -g @anthropic-ai/claude-code`), run `claude` once and log in; that login is the OAuth.",
     "codex": "Install the Codex CLI (`npm install -g @openai/codex`), run `codex login`; that login is the OAuth.",
 }
 MAX_MODELS_SHOWN = 15
+
+# One line per role, said before the model list: the person should not need to know what a
+# judge needs. The recommended model is pre-selected; Enter is a correct answer.
+ROLE_GUIDANCE = {
+    "writing": "The writer is where the prose comes from: the one role worth the strongest model you can afford.",
+    "judging": (
+        "The judge only reads and answers, but it runs on every chapter and every revision. "
+        "A balanced model is usually right; a different provider from the writer matters more than the most expensive one."
+    ),
+}
+_PREMIUM_HINTS = ("opus", "pro", "ultra", "o3", "o1", "large")
+_BUDGET_HINTS = ("mini", "nano", "haiku", "flash", "lite", "small")
+
+
+def tag_model(model_id: str) -> str:
+    """A plain-language tier for a model id, from the naming every provider shares:
+    mini/nano/haiku/flash/lite mean cheaper and faster; opus/pro/ultra/o-series mean the
+    flagship. A hint about tier, not a price list. Budget wins when both appear (o3-mini).
+    Whole tokens only: "gemini" contains "mini" and is not a budget model."""
+    import re
+
+    tokens = {token for token in re.split(r"[^a-z0-9]+", model_id.lower()) if token}
+    if tokens & set(_BUDGET_HINTS):
+        return "cheaper, fine for mechanical roles"
+    if tokens & set(_PREMIUM_HINTS):
+        return "pricier, the strongest for writing a book"
+    return "best cost/quality balance"
 
 Ask = Callable[..., str]
 Secret = Callable[[str], str]
@@ -249,7 +278,11 @@ def _pick_model(
     models_of: Optional[Lister],
     picker: Optional[Choose] = None,
 ) -> str:
-    """A numbered/arrow-key list of live models when the provider can list them; typed otherwise."""
+    """A numbered/arrow-key list of live models when the provider can list them; typed otherwise.
+    Every entry carries its tier tag, the recommended one says so and is pre-selected."""
+    guidance = ROLE_GUIDANCE.get(purpose)
+    if guidance:
+        say(f"  {guidance}")
     candidates: List[str] = []
     if key in CLI_MODELS:
         candidates = list(CLI_MODELS[key])
@@ -264,7 +297,10 @@ def _pick_model(
     if not candidates:
         return ask(f"Model for {purpose} on {key}", default_model) or default_model
     shown = _prioritise(candidates, default_model)[:MAX_MODELS_SHOWN]
-    options = shown + ["Type another model id"]
+    display = [
+        f"{model}  ({tag_model(model)}{', recommended' if model == default_model else ''})" for model in shown
+    ]
+    options = display + ["Type another model id"]
     default_index = shown.index(default_model) + 1 if default_model in shown else 1
     chooser = picker or text_choose(ask, say)
     choice = chooser(f"Model for {purpose} on {key}", options, default_index)
@@ -362,4 +398,4 @@ def _default_verifier(adapter_name: str, model: str, provider: Optional[Dict[str
     return verify_candidate(adapter, model)
 
 
-__all__ = ["run_setup", "MENU", "BY_KEY", "Preset", "text_choose", "Choose"]
+__all__ = ["run_setup", "MENU", "BY_KEY", "Preset", "text_choose", "Choose", "tag_model", "ROLE_GUIDANCE"]

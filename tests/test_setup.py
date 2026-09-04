@@ -9,7 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from runner.onboarding import Detection  # type: ignore  # noqa: E402
-from runner.setup import run_setup  # type: ignore  # noqa: E402
+from runner.setup import run_setup, tag_model  # type: ignore  # noqa: E402
 from runner.userconfig import load_user_config  # type: ignore  # noqa: E402
 
 
@@ -177,6 +177,63 @@ class CustomSetupTests(unittest.TestCase):
         self.assertEqual("sonnet", config.roles["writer"].model)
         self.assertIn("OAuth", io.transcript)
         self.assertIn("npm install -g @anthropic-ai/claude-code", io.transcript)
+
+
+class ModelGuidanceTests(unittest.TestCase):
+    """The person should not need to know what a judge needs: every model carries a tier tag,
+    the recommended one says so and is pre-selected, and each role gets one line of why."""
+
+    def setUp(self) -> None:
+        self.tempdir = Path(tempfile.mkdtemp(prefix="book-genesis-setup-"))
+        self.path = self.tempdir / "config.yaml"
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tempdir, ignore_errors=True)
+
+    def test_tags_follow_the_naming_every_provider_shares(self) -> None:
+        self.assertIn("strongest", tag_model("opus"))
+        self.assertIn("strongest", tag_model("gemini-3.1-pro-high"))
+        self.assertIn("strongest", tag_model("o3"))
+        self.assertIn("cheaper", tag_model("haiku"))
+        self.assertIn("cheaper", tag_model("gpt-5.5-mini"))
+        self.assertIn("cheaper", tag_model("gemini-3.8-flash-high"))
+        self.assertIn("cheaper", tag_model("o3-mini"))  # budget wins over the o-series hint
+        self.assertIn("balance", tag_model("sonnet"))
+        self.assertIn("balance", tag_model("gpt-5.5"))
+        self.assertIn("balance", tag_model("deepseek-chat"))
+
+    def test_the_list_shows_tags_and_marks_the_recommended_model(self) -> None:
+        def lister(provider_type, base_url, api_key):
+            return ["deepseek-chat", "deepseek-reasoner"]
+
+        # 2 = custom; 4 = deepseek; model 1; judge 13 = same; judge model 1.
+        io = ScriptedIO(answers=["2", "4", "1", "13", "1"], secrets=["sk-ds"])
+        run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[], verifier=always_ok, lister=lister)
+
+        transcript = io.transcript
+        self.assertIn("deepseek-chat  (best cost/quality balance, recommended)", transcript)
+        self.assertIn("deepseek-reasoner  (best cost/quality balance)", transcript)
+        config = load_user_config(self.path)
+        self.assertEqual("deepseek-chat", config.roles["writer"].model)  # the raw id, not the tagged label
+
+    def test_each_role_gets_one_line_of_guidance_before_the_list(self) -> None:
+        io = ScriptedIO(answers=["2", "1", "1", "13", "1"])
+        run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[], verifier=always_ok, lister=no_models)
+        transcript = io.transcript
+        self.assertIn("The writer is where the prose comes from", transcript)
+        self.assertIn("The judge only reads and answers", transcript)
+        self.assertIn("opus  (pricier, the strongest for writing a book, recommended)", transcript)
+        self.assertIn("haiku  (cheaper, fine for mechanical roles)", transcript)
+
+    def test_codex_offers_its_verified_default_instead_of_a_blank_prompt(self) -> None:
+        # 2 = custom; 2 = codex (not detected -> OAuth help); model 1; judge 13 = same; judge model 1.
+        io = ScriptedIO(answers=["2", "2", "1", "13", "1"])
+        run_setup(ask=io.ask, secret=io.secret, say=io.say, path=self.path, detections=[], verifier=always_ok, lister=no_models)
+        config = load_user_config(self.path)
+        self.assertEqual("gpt-5.5", config.roles["writer"].model)
+        self.assertEqual("gpt-5.5", config.roles["judge"].model)
+        self.assertIn("gpt-5.5  (best cost/quality balance, recommended)", io.transcript)
+        self.assertIn("Type another model id", io.transcript)
 
 
 class ReRunTests(unittest.TestCase):

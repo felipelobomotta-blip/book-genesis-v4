@@ -8,12 +8,14 @@ The picker only runs for real when stdin and stdout are both an actual terminal
 (``supports_interactive``); ``runner/setup.py`` falls back to typing a number otherwise. That
 fallback is also what every automated test uses, so the only things here that need a live
 terminal to exercise (``read_key``, ``interactive_choose``) are verified by hand, in a real
-terminal, not by ``pytest`` - ``apply_key`` carries the actual navigation logic and is what the
+terminal. ``apply_key`` and ``physical_rows`` carry the logic that matters and are what the
 test suite checks.
 """
 
 from __future__ import annotations
 
+import re
+import shutil
 import sys
 from typing import List, Optional, TextIO
 
@@ -26,6 +28,7 @@ TITLE = "B O O K   G E N E S I S"
 SUBTITLE = "one idea -> a chapter read blind -> a book"
 
 _ansi_ready = False
+_ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 
 
 def supports_interactive(stdin: Optional[object] = None, stdout: Optional[object] = None) -> bool:
@@ -37,6 +40,20 @@ def supports_interactive(stdin: Optional[object] = None, stdout: Optional[object
         return bool(stdin.isatty()) and bool(stdout.isatty())
     except (AttributeError, ValueError):
         return False
+
+
+def strip_ansi(text: str) -> str:
+    return _ANSI.sub("", text)
+
+
+def physical_rows(line: str, width: int) -> int:
+    """How many terminal rows one logical line occupies once the terminal wraps it at
+    ``width`` columns. Color codes take no space. A line exactly ``width`` wide is one row:
+    terminals defer the wrap until the next character, and we always print a newline next."""
+    visible = len(strip_ansi(line))
+    if visible == 0 or width <= 0:
+        return 1
+    return (visible - 1) // width + 1
 
 
 def banner(color: bool = True) -> str:
@@ -83,14 +100,14 @@ def interactive_choose(question: str, options: List[str], default: int = 1) -> i
     Ctrl+C (or Esc) raises KeyboardInterrupt, same as anywhere else in the CLI."""
     _enable_windows_ansi()
     selected = max(0, min(default - 1, len(options) - 1))
-    first = True
+    stream = sys.stdout
+    drawn_rows = 0
     while True:
         lines = [f"? {question}"] + [_option_line(option, index == selected) for index, option in enumerate(options)]
-        _draw(sys.stdout, lines, first=first)
-        first = False
+        drawn_rows = _redraw(stream, lines, drawn_rows)
         key = read_key()
         if key == "enter":
-            _draw(sys.stdout, [f"{CYAN}*{RESET} {question}: {BOLD}{options[selected]}{RESET}"], first=False, clear_extra=len(lines) - 1)
+            _redraw(stream, [f"{CYAN}*{RESET} {question}: {BOLD}{options[selected]}{RESET}"], drawn_rows)
             return selected + 1
         selected = apply_key(key, selected, len(options))
 
@@ -101,14 +118,23 @@ def _option_line(option: str, active: bool) -> str:
     return f"    {DIM}{option}{RESET}"
 
 
-def _draw(stream: TextIO, lines: List[str], *, first: bool, clear_extra: int = 0) -> None:
-    if not first:
-        stream.write(f"\x1b[{len(lines) + clear_extra}A")
+def _redraw(stream: TextIO, lines: List[str], previous_rows: int) -> int:
+    """Move back to where the previous frame started, wipe from there to the end of the
+    screen, print the new frame. Returns how many terminal rows the frame took, counting
+    lines the terminal wrapped, so the next call knows how far to move back.
+
+    The first version moved up by the number of logical lines. A label longer than the
+    terminal is wide wraps onto a second row, the cursor came back one row short, and the
+    tail of the old frame stayed on screen behind the new one. Counting physical rows is
+    the fix; erasing to the end of the screen (not N lines) covers whatever is left."""
+    if previous_rows:
+        stream.write(f"\x1b[{previous_rows}A")
+    stream.write("\r\x1b[0J")
+    width = shutil.get_terminal_size((80, 24)).columns
     for line in lines:
-        stream.write("\x1b[2K\r" + line + "\n")
-    for _ in range(clear_extra):
-        stream.write("\x1b[2K\r\n")
+        stream.write(line + "\n")
     stream.flush()
+    return sum(physical_rows(line, width) for line in lines)
 
 
 def read_key() -> str:
@@ -176,4 +202,12 @@ def _enable_windows_ansi() -> None:
     _ansi_ready = True
 
 
-__all__ = ["apply_key", "banner", "interactive_choose", "read_key", "supports_interactive"]
+__all__ = [
+    "apply_key",
+    "banner",
+    "interactive_choose",
+    "physical_rows",
+    "read_key",
+    "strip_ansi",
+    "supports_interactive",
+]
