@@ -149,6 +149,118 @@ def list_models(
     return sorted(dict.fromkeys(ids))
 
 
+import json
+import re
+import time
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+# Tokens that mark a model as not-a-chat-model (embeddings, speech, images, moderation,
+# provider-specific variants). Whole tokens, so "gemini" never trips on "mini".
+_NON_CHAT_TOKENS = {
+    "embedding", "embeddings", "tts", "whisper", "dall", "dalle", "image", "audio", "realtime",
+    "moderation", "transcribe", "transcription", "search", "sora", "vision", "safeguard", "cyber",
+    "instruct", "batch", "free", "davinci", "babbage", "curie", "ada", "lyria", "veo", "imagen",
+    "exp", "preview",
+}
+_DATE_SUFFIX = re.compile(r"[-_](\d{4}-\d{2}-\d{2}|\d{8}|\d{4})$")
+_VERSION = re.compile(r"\d+(?:\.\d+)?")
+CACHE_TTL_SECONDS = 7 * 24 * 3600
+DEFAULT_CACHE_PATH = Path.home() / ".book-genesis" / "models-cache.json"
+
+
+def _tokens(model_id: str) -> set:
+    return {token for token in re.split(r"[^a-z0-9]+", model_id.lower()) if token}
+
+
+def chat_models_only(ids: List[str]) -> List[str]:
+    """Drop what a book pipeline can never use (embeddings, speech, images, moderation,
+    provider variants like ':batch'), then drop dated snapshots that have an undated twin."""
+    kept: List[str] = []
+    for model_id in ids:
+        base = model_id.split(":")[0]
+        if _tokens(base) & _NON_CHAT_TOKENS:
+            continue
+        kept.append(base)
+    kept = list(dict.fromkeys(kept))
+    undated = set(kept)
+    result: List[str] = []
+    for model_id in kept:
+        stripped = _DATE_SUFFIX.sub("", model_id)
+        if stripped != model_id and stripped in undated:
+            continue
+        result.append(model_id)
+    return result
+
+
+def version_key(model_id: str):
+    """Newest first: the first number in the id (5.5 before 5.4 before 5 before 4.1)."""
+    numbers = _VERSION.findall(model_id.replace("-", ".").replace("_", "."))
+    first = float(numbers[0]) if numbers else 0.0
+    return (-first, model_id)
+
+
+def sort_models(ids: List[str]) -> List[str]:
+    return sorted(ids, key=version_key)
+
+
+def probe_models(
+    adapter: Adapter,
+    candidates: List[str],
+    *,
+    workers: int = 4,
+    on_result: Optional[Callable[[str, bool], None]] = None,
+) -> List[str]:
+    """One tiny real completion per candidate, in parallel; keeps the ones that answered.
+    This is the only honest way to know what a subscription CLI accepts: the machine that ran
+    this had a Codex CLI that took gpt-5.5 and gpt-5.4 and refused every other GPT id."""
+
+    def one(candidate: str) -> Optional[str]:
+        ok, _ = verify_candidate(adapter, candidate)
+        if on_result is not None:
+            on_result(candidate, ok)
+        return candidate if ok else None
+
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+        results = list(pool.map(one, candidates))
+    return [candidate for candidate in results if candidate]
+
+
+def cached_models(key: str, path: Optional[Path] = None, *, ttl: int = CACHE_TTL_SECONDS, now: Optional[float] = None) -> Optional[List[str]]:
+    target = path or DEFAULT_CACHE_PATH
+    if not target.exists():
+        return None
+    try:
+        data = json.loads(target.read_text(encoding="utf-8"))
+    except (ValueError, OSError):
+        return None
+    entry = data.get(key) if isinstance(data, dict) else None
+    if not isinstance(entry, dict):
+        return None
+    stamp = float(entry.get("at", 0))
+    current = time.time() if now is None else now
+    if current - stamp > ttl:
+        return None
+    models = entry.get("models")
+    return list(models) if isinstance(models, list) else None
+
+
+def store_models(key: str, models: List[str], path: Optional[Path] = None, *, now: Optional[float] = None) -> Path:
+    target = path or DEFAULT_CACHE_PATH
+    data: Dict[str, object] = {}
+    if target.exists():
+        try:
+            loaded = json.loads(target.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                data = loaded
+        except (ValueError, OSError):
+            data = {}
+    data[key] = {"at": time.time() if now is None else now, "models": list(models)}
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return target
+
+
 def _http_get(url: str, headers: Dict[str, str]) -> Tuple[int, bytes]:
     request = urllib.request.Request(url, headers=headers, method="GET")
     try:
