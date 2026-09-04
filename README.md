@@ -30,7 +30,7 @@ Chapter 1 is read by a **panel** of blind readers before the book goes on: diffe
 
 **Step 1 — Requirements**
 
-- Python 3.10 or newer. No other packages.
+- Python 3.10 or newer. One package, `rich`, for the interface; `pip install -e .` brings it. Without it the runner still works and prints plain lines.
 - A way to run models, any one of these: an API key for OpenRouter, DeepSeek, Anthropic, OpenAI, Groq or Together; a local server (Ollama, LM Studio); [Claude Code](https://claude.ai/code) (`claude`) or the [Codex CLI](https://github.com/openai/codex) (`codex`) already logged in; any other command-line tool declared in `runner/config/adapters.yaml`; or nothing at all with `--manual`, which writes every prompt to a file and waits for you to paste the reply from any chat. Two families is better: the writer and the judge then disagree in useful ways. One family works, with a `single family` warning in the run report.
 
 **Step 2 — Install the command and choose your providers**
@@ -53,11 +53,33 @@ It writes `~/.book-genesis/config.yaml` and nothing else; a key never enters the
 book-genesis new
 ```
 
-It asks for the idea and the language, then runs everything and prints each step as it happens: intake, foundation, architecture, every chapter (chapter 1 through the reader panel), the adversarial audit, the diagnostic score, the editorial package. `book-genesis resume my-book` continues a project from wherever it stopped. The lower-level commands (`run-phase`, `book`, `chapter`, `judge`, `panel`) are still there for when you want one step at a time.
+It asks for your idea and the language, then opens a **guided session**: a live track of the seven stages, the pipeline talking underneath it, and three moments where it stops and shows you something.
 
-Every artifact is a Markdown file in the project folder. Nothing happens in chat; everything happens on disk. When it is done, read `RUN_REPORT.md`: every chapter, every verdict, every warning, in the order they happened.
+```
+✔   Intake         0:42  The Watch Room, thriller
+✔   Foundation     2:15  wrote 3 files
+✔   Architecture   1:58  14 chapters outlined
+⠹   Drafting       6:04  chapter 3 of 14: judge says turn_page=yes, flags=[]
+○   Audit
+○   Score
+○   Package
+```
 
-Prefer to read chapter 1 yourself before the rest is written? `book-genesis new --human` pauses there until you run `book-genesis approve <folder> chapter-01`.
+At each stop you get the whole artifact and one question:
+
+| It shows you | You can |
+|---|---|
+| **The brief** — what the book is going to be | press Enter, or type what to change |
+| **The outline** — every chapter, before a word of prose | press Enter, or type what to change |
+| **Chapter 1, read blind** — how many readers would turn the page, what they remembered, the prose itself | press Enter, or type notes and it rewrites the chapter |
+
+Enter agrees. Anything you type becomes **author notes**: the stage runs again with them, and they stay in every later stage and every later chapter. `q` stops, and `book-genesis resume <folder>` picks up exactly where you left it.
+
+At the end you get a **Genesis Score**, built only from what blind readers did: how many of the panel would turn the page, how many chapters were accepted on the first draft, how many were accepted at all, how many left the reader with something specific. Nothing in it is graded by the model that wrote the prose.
+
+Every artifact is a Markdown file in the project folder. Nothing happens in chat; everything happens on disk. When it is done, read `RUN_REPORT.md`: every chapter, every verdict, every warning, and the score, in the order they happened.
+
+**Prefer it to never ask?** `book-genesis new --yes` runs the whole thing without a single question, which is also what happens automatically when there is no terminal (a script, a cron job, CI). `--plain` swaps the live interface for plain lines. `--human` goes the other way and pauses after chapter 1 until you run `book-genesis approve <folder> chapter-01`. The lower-level commands (`run-phase`, `book`, `chapter`, `judge`, `panel`, `polish`) are still there for when you want one step at a time.
 
 ---
 

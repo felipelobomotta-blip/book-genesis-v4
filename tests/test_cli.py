@@ -211,9 +211,10 @@ class CliTests(unittest.TestCase):
         self.assertIn("PACKAGE-SENTINEL", (project / "artifacts" / "10-editorial-package.md").read_text(encoding="utf-8"))
         self.assertIn("completed", result.stdout)
 
-    def test_book_genesis_console_script_is_declared(self) -> None:
+    def test_book_genesis_console_script_points_at_the_guided_entry_point(self) -> None:
+        # ADR 0009: `book-genesis` opens the guided session; runner.cli stays the command layer.
         pyproject = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
-        self.assertIn('book-genesis = "runner.cli:main"', pyproject)
+        self.assertIn('book-genesis = "runner.app:main"', pyproject)
 
     def test_judge_command_resolves_an_explicit_provider_from_the_user_config(self) -> None:
         # Regression: standalone `judge --adapter <name>` used to skip user_config entirely,

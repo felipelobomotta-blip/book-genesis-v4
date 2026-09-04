@@ -68,6 +68,16 @@ def build_chapter_brief(project: Path, chapter: int, *, write: bool = True) -> s
         path = project / relative
         if path.exists():
             parts += [f"## {heading}", "", path.read_text(encoding="utf-8").strip(), ""]
+    notes = project / "work" / "author-notes.md"
+    if notes.exists() and notes.read_text(encoding="utf-8").strip():
+        parts += [
+            "## Author notes",
+            "",
+            "The author asked for these while reading earlier results. They override the defaults above.",
+            "",
+            notes.read_text(encoding="utf-8").strip(),
+            "",
+        ]
     parts += [
         "## Where the previous chapter left the reader",
         "",

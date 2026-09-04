@@ -9,10 +9,12 @@ description = "From one idea to a blind-judged manuscript. A runner that drives 
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-dependencies = []
+# rich draws the guided session (ADR 0009). It is the only dependency, pure Python, and the
+# runner falls back to plain lines when it is missing, so an offline install still works.
+dependencies = ["rich>=13"]
 
 [project.scripts]
-book-genesis = "runner.cli:main"
+book-genesis = "runner.app:main"
 
 [tool.setuptools]
 packages = ["runner"]

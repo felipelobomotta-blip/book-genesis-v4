@@ -108,6 +108,13 @@ def build_phase_prompt(project: Path, phase: Phase) -> str:
     existing = "".join(
         f"## Current `{relative}`\n\n{text}\n\n" for relative, text in _existing_artifacts(project)
     )
+    notes = author_notes(project)
+    if notes:
+        existing += (
+            "## Author notes\n\n"
+            "The author read the previous result and asked for these changes. They override the defaults above.\n\n"
+            f"{notes}\n\n"
+        )
     required = [output for output in phase.outputs if output != "manuscript/chapters"]
     required_lines = "\n".join(f"- `{item}`" for item in required)
     outline_rule = ""
@@ -137,6 +144,12 @@ def build_phase_prompt(project: Path, phase: Phase) -> str:
         + existing
         + output_contract
     )
+
+
+def author_notes(project: Path) -> str:
+    """Notes the person typed at a point of agreement in the guided session (ADR 0009)."""
+    path = project / "work" / "author-notes.md"
+    return path.read_text(encoding="utf-8").strip() if path.exists() else ""
 
 
 def split_files(text: str) -> Tuple[Dict[str, str], Dict[str, str]]:
