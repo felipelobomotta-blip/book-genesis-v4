@@ -47,6 +47,8 @@ Export includes accepted canonical chapters. A working project can be exported b
 
 Install the Python repository first, then run `python scripts/capture_cli.py` to regenerate the Rich HTML and the reader fixture. It uses a new temporary project and fake responses, and does not call a real provider. The script leaves its temporary fixture directory available for inspection. Take new PNG screenshots of the resulting HTML and record any new reader interactions before replacing the matching media files.
 
+Regenerated command and export paths use portable forward slashes in the displayed transcript; the runner receives native paths. The published video screenshots retain the path formatting of the original recording session.
+
 Optional Windows narration regeneration: run `scripts/generate_voice.ps1` in a PowerShell session with the Microsoft Zira Desktop voice and FFprobe installed. It rewrites the WAVs and timing JSON. If wording or durations change, update the checkpoint scene timings and subtitles before rendering again. You can also record your own English narration and update the paths and durations directly.
 
 Final video binaries are attached to the GitHub release rather than stored in Git. Rebuilds on another OS or with different fonts may differ visually.

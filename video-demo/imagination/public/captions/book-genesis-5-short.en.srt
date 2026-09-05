@@ -32,7 +32,7 @@ Read locally and compare versions.
 
 9
 00:00:22,733 --> 00:00:26,233
-Export your working manuscript as E pub.
+Export your working manuscript as EPUB.
 
 10
 00:00:26,233 --> 00:00:29,000

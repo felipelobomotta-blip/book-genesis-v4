@@ -9,12 +9,12 @@
   "capture-export": {
     "args": [
       "export",
-      "books\\lantern-demo",
+      "books/lantern-demo",
       "--format",
       "epub"
     ],
     "exit_code": 0,
-    "output": "export: [project]\\exports\\manuscript.epub\n"
+    "output": "export: [project]/exports/manuscript.epub\n"
   },
   "guided": {
     "new_exit": 0,
