@@ -1,11 +1,13 @@
 # Book Genesis 5 — Imagination Edition marketing kit
 
-This is the complete English launch kit. Artwork and carousel exports are ready to share; written copy and the calendar are editable drafts. The repository URL is filled in. Choose your account and timing when you are ready to post.
+This is the complete English launch kit. Narrated videos, artwork, and carousel exports are ready to share; written copy and the calendar are editable drafts. The repository URL is filled in. Choose your account and timing when you are ready to post.
 
 ## Contents
 
 | File | Use |
 | --- | --- |
+| [`../docs/video-walkthrough.md`](../docs/video-walkthrough.md) | Finished 60-second walkthrough, 33-second vertical cut, English subtitles, and editable source. |
+| [`video-social-copy.md`](video-social-copy.md) | Video titles, descriptions, and copy for YouTube, Shorts, Reels, TikTok, X, and LinkedIn. |
 | [`copy/en.md`](copy/en.md) | English copy ready to adapt and publish. |
 | [`calendar-14-days.csv`](calendar-14-days.csv) | Measurable D0–D13 launch sequence without invented dates or times. |
 | [`carousel-script.md`](carousel-script.md) | Six-slide English carousel copy. |

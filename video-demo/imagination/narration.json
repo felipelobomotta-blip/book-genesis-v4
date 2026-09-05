@@ -1,0 +1,20 @@
+{
+  "long": [
+    {"id":"hook","caption":"That idea deserves a first chapter.","text":"Every book starts as a thought worth saving. Book Genesis Five helps you turn that thought into a working manuscript."},
+    {"id":"setup","caption":"Python 3.10+ · Your chosen model route","text":"Install with Python three point ten or newer, and connect the model route you already use."},
+    {"id":"start","caption":"Start with one sentence.","text":"Run book genesis new. Add one sentence for your idea, and choose the language."},
+    {"id":"checkpoint","caption":"Review. Leave a note. Resume later.","text":"Review the brief, outline, and first chapter. Press Enter to continue, or type a note to steer the work. Quit and resume whenever you need."},
+    {"id":"reader","caption":"Read locally. Compare versions.","text":"Your drafts and revision history stay on your machine. Open the local reader, move between chapters, and compare versions."},
+    {"id":"export","caption":"Markdown + EPUB · Partial work is labeled","text":"Export your working manuscript as Markdown or E pub. Incomplete projects are labeled as partial."},
+    {"id":"cta","caption":"Creativity comes first. Your story. Your choices.","text":"Book Genesis Five. Open source beta. Creativity comes first. Your story. Your choices."}
+  ],
+  "short": [
+    {"id":"hook","caption":"You have the idea.","text":"You have the idea. The story stays yours."},
+    {"id":"setup","caption":"Python 3.10+ + a model route","text":"With Python installed, connect your model route."},
+    {"id":"start","caption":"Start with one sentence.","text":"Run book genesis new, and start with one sentence."},
+    {"id":"checkpoint","caption":"Brief · Outline · Chapter 1","text":"Review the brief, outline, and first chapter. Leave a note, pause, and resume."},
+    {"id":"reader","caption":"Compare versions.","text":"Read locally and compare versions."},
+    {"id":"export","caption":"Export Markdown or EPUB.","text":"Export your working manuscript as E pub."},
+    {"id":"cta","caption":"Creativity comes first.","text":"Book Genesis Five. Open source beta. Creativity comes first."}
+  ]
+}
