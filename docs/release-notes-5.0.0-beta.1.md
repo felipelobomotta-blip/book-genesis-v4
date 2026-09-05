@@ -30,6 +30,8 @@ You bring a premise and choose the model provider. The project keeps its artifac
 
 ## Evidence from this beta
 
+- **All four remote CI jobs passed** on Windows/Ubuntu with Python 3.10/3.12 for commit `4ba8ce2`. [View the run](https://github.com/felipelobomotta-blip/book-genesis-v4/actions/runs/33947757174).
+
 - **279 automated tests passed locally** on Windows with Python 3.11 before remote CI, including package installation outside the checkout, recovery, history integrity, reader UI, export, and CLI regressions.
 - One limited real-provider run produced the Portuguese one-chapter story *Data de Devolução* (1,910 words). This is an engineering smoke test, not evidence that the system writes publishable books.
 - The first model-reader panel accepted the chapter and generated an internal 10/10 process signal. Once the full prose reached the manuscript audit, the audit found a structural gap and returned **MAJOR REWRITE**. The beta now blocks the pipeline at that point instead of treating the existence of an audit file as approval.

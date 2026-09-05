@@ -25,7 +25,7 @@ The default role plan prefers different model families for writer and judge. Whe
 
 ## Platform evidence
 
-The current beta was verified locally on Windows with Python 3.11: 279 offline tests passed in the September 2026 quality verification, including recovery, history integrity, the audit gate, reader/export flows, and wheel installation outside the checkout. A GitHub Actions workflow is included for Ubuntu and Windows on Python 3.10 and 3.12, but that remote matrix has not yet been run for this beta. Treat the workflow as configured, not as completed remote evidence.
+The current beta was verified locally on Windows with Python 3.11: 279 offline tests passed in the September 2026 quality verification, including recovery, history integrity, the audit gate, reader/export flows, and wheel installation outside the checkout. The GitHub Actions matrix also passed on Ubuntu and Windows with Python 3.10 and 3.12 for commit `4ba8ce2`. See the [recorded CI run](https://github.com/felipelobomotta-blip/book-genesis-v4/actions/runs/33947757174). This verifies software checks and wheel builds; it does not verify every live provider route.
 
 Provider behavior also varies by installed CLI version, operating system, account access, context window, and network conditions. The repository contains deterministic tests and limited real-provider probes; it does not claim that every advertised route has been live-tested on every platform.
 

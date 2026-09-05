@@ -48,3 +48,7 @@ No API key or live model call is needed for the regression suite. Live provider 
 ## Clean-runner findings
 
 The first GitHub CI run exposed three unit tests that depended on installed Claude/Codex commands, a doctor test that depended on local provider configuration, and a Windows-only separator in a rollback fixture. The fixtures now declare their environment explicitly and use path components. Their behavioral assertions remain in place. After these corrections, the isolated local suite passed 279 tests in 26.73 seconds; remote matrix results remain inspectable in GitHub Actions.
+
+## Remote matrix result
+
+Commit `4ba8ce2` passed all four GitHub jobs: Windows/Python 3.10, Windows/Python 3.12, Ubuntu/Python 3.10, and Ubuntu/Python 3.12. Each job ran the regression suite (including isolated wheel installation) and built a wheel. [Inspect the successful run](https://github.com/felipelobomotta-blip/book-genesis-v4/actions/runs/33947757174). The Windows process-tree test is deliberately platform-specific.
