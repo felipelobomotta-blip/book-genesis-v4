@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # Book Genesis — "How to use it" step-by-step tutorial (terminal screencast style)
 # Real commands + real 8-phase pipeline from the repo (book-genesis-v4).
-import sys, math, subprocess
+import sys, os, math, subprocess, importlib.util
 from PIL import Image, ImageDraw, ImageFont
 
 LANG   = sys.argv[1] if len(sys.argv)>1 else 'en'
@@ -20,7 +20,22 @@ TBG=(26,28,38); TBAR=(40,43,56); TTXT=(223,226,233); TMUTE=(150,156,170)
 TGREEN=(126,196,140); TACC=(236,156,112)
 DOT1=(237,106,94); DOT2=(245,191,79); DOT3=(98,197,109)
 
-FD="/usr/share/fonts/truetype/dejavu/"
+def _dejavu_dir():
+    """Locate the DejaVu TTFs. They ship with most Linux distros and are also
+    bundled inside matplotlib, which makes this work on macOS and Windows too."""
+    cands=["/usr/share/fonts/truetype/dejavu/","/usr/share/fonts/dejavu/",
+           "/usr/local/share/fonts/","/opt/homebrew/share/fonts/"]
+    # find_spec locates matplotlib without importing it (importing can fail on
+    # a mismatched NumPy, and we only need the path to its bundled fonts).
+    spec=importlib.util.find_spec("matplotlib")
+    if spec and spec.origin:
+        cands.insert(0,os.path.join(os.path.dirname(spec.origin),"mpl-data","fonts","ttf")+os.sep)
+    for d in cands:
+        if os.path.isfile(os.path.join(d,"DejaVuSerif.ttf")): return d
+    raise SystemExit("DejaVu fonts not found. Install them (Debian/Ubuntu: "
+                     "fonts-dejavu-core) or `pip install matplotlib`, which bundles them.")
+
+FD=_dejavu_dir()
 _cache={}
 def font(kind,sz):
     k=(kind,sz)
