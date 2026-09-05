@@ -8,6 +8,7 @@ This is the complete English launch kit. Narrated videos, artwork, and carousel 
 | --- | --- |
 | [`../docs/video-walkthrough.md`](../docs/video-walkthrough.md) | Finished 60-second walkthrough, 33-second vertical cut, English subtitles, and editable source. |
 | [`video-social-copy.md`](video-social-copy.md) | Video titles, descriptions, and copy for YouTube, Shorts, Reels, TikTok, X, and LinkedIn. |
+| [`launch/README.md`](launch/README.md) | First-launch packet: final YouTube, LinkedIn, and X copy, plus a blank results sheet. |
 | [`copy/en.md`](copy/en.md) | English copy ready to adapt and publish. |
 | [`calendar-14-days.csv`](calendar-14-days.csv) | Measurable D0–D13 launch sequence without invented dates or times. |
 | [`carousel-script.md`](carousel-script.md) | Six-slide English carousel copy. |

@@ -1,1 +1,1 @@
-export: [project]\exports\manuscript.epub
+export: [project]/exports/manuscript.epub
