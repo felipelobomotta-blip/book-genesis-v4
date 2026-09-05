@@ -1,4 +1,6 @@
 import os
+import io
+from contextlib import redirect_stdout
 from pathlib import Path
 import shutil
 import subprocess
@@ -277,12 +279,20 @@ class CliTests(unittest.TestCase):
         self.assertIn("deepseek", result.stdout)  # the provider is still shown somewhere
 
     def test_doctor_reports_adapters_and_plan(self) -> None:
-        result = run_cli("doctor")
-        self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
-        self.assertIn("claude", result.stdout)
-        self.assertIn("codex", result.stdout)
-        self.assertIn("writer", result.stdout)
-        self.assertIn("judge", result.stdout)
+        # `doctor` reports discovery and a plan. Make its environment explicit so
+        # the test is not coupled to CI (or a developer) having provider CLIs.
+        output = io.StringIO()
+        found = {"claude": True, "codex": True, "gemini": False, "muse-spark": False}
+        locations = {"claude": "/fixture/claude", "codex": "/fixture/codex"}
+        with patch("runner.cli.available_adapters", return_value=found), patch(
+            "runner.cli.shutil.which", side_effect=lambda name: locations.get(name)
+        ), patch("runner.cli.load_user_config", return_value=None), redirect_stdout(output):
+            result = cli._doctor_command()
+        self.assertEqual(0, result, msg=output.getvalue())
+        self.assertIn("claude: found at /fixture/claude", output.getvalue())
+        self.assertIn("codex: found at /fixture/codex", output.getvalue())
+        self.assertIn("writer", output.getvalue())
+        self.assertIn("judge", output.getvalue())
 
     def test_run_phase_command_executes_the_current_phase(self) -> None:
         fresh = self.tempdir / "fresh"

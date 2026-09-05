@@ -53,7 +53,8 @@ class RuntimeIntegrityTests(unittest.TestCase):
         original_replace = __import__("os").replace
         calls = {"n": 0}
         def fail_second(source, destination):
-            if str(destination).endswith("artifacts\\01-market-map.md"):
+            target = Path(destination)
+            if target.name == "01-market-map.md" and target.parent.name == "artifacts":
                 raise OSError("injected publish failure")
             return original_replace(source, destination)
         with patch("runner.phases.os.replace", side_effect=fail_second):

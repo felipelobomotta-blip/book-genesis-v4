@@ -54,7 +54,7 @@ Please do not share API keys, private manuscripts, or personally identifying mat
 - Reader-panel results are model signals, not human research; one configured model family is allowed but reported as a warning.
 - Long manuscripts can exceed a provider's context limit when the full manuscript is audited.
 - A structural audit rejection explains the problem and blocks completion; it does not automatically repair the manuscript.
-- The Windows/Linux CI matrix exists but has not yet been run remotely.
+- Windows/Linux CI runs on Python 3.10 and 3.12; see the [release workflow results](https://github.com/felipelobomotta-blip/book-genesis-v4/actions/workflows/test.yml).
 
 ## Launch assets
 

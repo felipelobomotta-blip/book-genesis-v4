@@ -76,13 +76,17 @@ class GenericCliAdapterTests(unittest.TestCase):
 
 class BuiltInCliIsolationTests(unittest.TestCase):
     def test_claude_explicitly_disables_its_tools(self) -> None:
-        command = ClaudeCliAdapter().build_command()
+        # The command shape is a unit contract; no installed Claude CLI is required.
+        with patch("runner.adapters._resolve", return_value=["claude"]):
+            command = ClaudeCliAdapter().build_command()
         self.assertEqual("", command[command.index("--tools") + 1])
         self.assertIn("--safe-mode", command)
         self.assertIn("--disable-slash-commands", command)
 
     def test_codex_uses_the_supported_read_only_ephemeral_boundary(self) -> None:
-        command = CodexCliAdapter().build_command()
+        # The command shape is a unit contract; no installed Codex CLI is required.
+        with patch("runner.adapters._resolve", return_value=["codex"]):
+            command = CodexCliAdapter().build_command()
         self.assertIn("--ephemeral", command)
         self.assertEqual("read-only", command[command.index("-s") + 1])
         self.assertIn("--ignore-user-config", command)
@@ -136,7 +140,7 @@ class BuiltInCliIsolationTests(unittest.TestCase):
         adapter = ClaudeCliAdapter(timeout_seconds=1)
         with patch("runner.adapters.tempfile.TemporaryDirectory", return_value=LockedDirectory()), patch(
             "runner.adapters._run", side_effect=__import__("subprocess").TimeoutExpired("claude", 1)
-        ):
+        ), patch("runner.adapters._resolve", return_value=["claude"]):
             with self.assertRaisesRegex(AdapterError, "claude timed out"):
                 adapter.complete("prompt")
 

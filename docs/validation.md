@@ -44,3 +44,7 @@ python -m pip wheel --no-deps --no-build-isolation --no-cache-dir --wheel-dir di
 ```
 
 No API key or live model call is needed for the regression suite. Live provider runs are separate and may incur the selected provider's costs.
+
+## Clean-runner findings
+
+The first GitHub CI run exposed three unit tests that depended on installed Claude/Codex commands, a doctor test that depended on local provider configuration, and a Windows-only separator in a rollback fixture. The fixtures now declare their environment explicitly and use path components. Their behavioral assertions remain in place. After these corrections, the isolated local suite passed 279 tests in 26.73 seconds; remote matrix results remain inspectable in GitHub Actions.
