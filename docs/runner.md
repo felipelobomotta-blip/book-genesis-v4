@@ -29,7 +29,7 @@ python runner/cli.py validate <project>
 python runner/cli.py demo <path>                 # deterministic file-contract demo, no model
 ```
 
-`--human` additionally requires explicit approval after chapter 1. The guided terminal session also asks for decisions at the brief, outline and chapter 1 unless `--yes` or non-interactive input is used. `--manual` turns every model call into a prompt file under `work/manual/` for people who only have a chat window. In the guided session, Enter continues, a typed response becomes author notes, and `q` stops safely; `resume` continues from the saved state and reports remaining work.
+`--human` additionally requires explicit approval after chapter 1. That opt-in is saved in the project: every later `resume`, including `resume --yes`, keeps the approval requirement until `approve` records it. The guided terminal session also asks for decisions at the brief, outline and chapter 1 unless `--yes` or non-interactive input is used. `--manual` turns every model call into a prompt file under `work/manual/` for people who only have a chat window. In the guided session, Enter continues, a typed response becomes author notes, and `q` stops safely; `resume` continues from the saved state and reports remaining work.
 
 `review` writes a self-contained reading page under `review/index.html`, with chapters, version history and comparison; `--open` opens that local file. `export` writes Markdown or EPUB under `exports/` and explicitly identifies partial work. Choose `--output PATH` for another destination. Inside the project, exports stay under `exports/` to protect inputs; `--overwrite` can replace an export, never the source manuscript. Neither command uploads the book.
 

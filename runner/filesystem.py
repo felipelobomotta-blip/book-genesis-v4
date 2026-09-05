@@ -169,6 +169,7 @@ def load_state_summary(target: Path) -> Dict[str, str]:
         "model_name": _extract_scalar(text, "model_name"),
         "current_phase": _extract_scalar(text, "current_phase"),
         "status": _extract_scalar(text, "status"),
+        "human_checkpoint_required": _extract_scalar(text, "human_checkpoint_required"),
     }
 
 
@@ -547,6 +548,7 @@ def _project_state_template(
         f"  current_phase: \"{first_phase}\"\n"
         "  current_gate: \"\"\n"
         "  status: \"not_started\"\n"
+        "  human_checkpoint_required: \"false\"\n"
         "  revision_iteration: 0\n\n"
         "artifacts:\n"
         "  generated: []\n\n"
@@ -562,6 +564,30 @@ def _project_state_template(
 def update_state_value(path: Path, key: str, value: str) -> None:
     """Public entry point: set the first ``key:`` scalar found in PROJECT_STATE.yaml."""
     _update_state_value(path, key, value.replace('"', "'"))
+
+
+def set_human_checkpoint_required(target: Path, required: bool) -> None:
+    """Persist the optional checkpoint, adding its field to pre-v5 project state."""
+    path = target / "PROJECT_STATE.yaml"
+    text = path.read_text(encoding="utf-8")
+    value = "true" if required else "false"
+    if _extract_scalar(text, "human_checkpoint_required"):
+        update_state_value(path, "human_checkpoint_required", value)
+        return
+
+    lines = text.splitlines()
+    for index, line in enumerate(lines):
+        if line.strip() != "pipeline:":
+            continue
+        for cursor in range(index + 1, len(lines)):
+            if lines[cursor] and not lines[cursor].startswith((" ", "\t")):
+                break
+            if lines[cursor].strip().startswith("status:"):
+                indent = lines[cursor][: len(lines[cursor]) - len(lines[cursor].lstrip())]
+                lines.insert(cursor + 1, f'{indent}human_checkpoint_required: "{value}"')
+                path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+                return
+    raise KeyError(f"Could not add human checkpoint state in {path}")
 
 
 def _update_state_value(path: Path, key: str, value: str) -> None:

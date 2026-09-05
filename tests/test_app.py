@@ -13,6 +13,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from runner import app  # type: ignore  # noqa: E402
+from runner.chapter import approve  # type: ignore  # noqa: E402
 from runner.filesystem import scaffold_project  # type: ignore  # noqa: E402
 from test_session import (  # type: ignore  # noqa: E402
     ARCHITECTURE,
@@ -81,6 +82,33 @@ class AppRoutingTests(unittest.TestCase):
         )
         self.assertEqual(0, code, msg=view.calls)
         self.assertTrue((project / "manuscript" / "chapters" / "chapter-01.md").exists())
+
+    def test_human_opt_in_survives_resume_and_yes_until_approved(self) -> None:
+        project = self.tempdir / "human-book"
+        first = app.session_main(
+            [
+                "new", "--idea", "an analyst", "--language", "en", "--path", str(project),
+                "--yes", "--human", "--fake-responses", str(self.responses(INTAKE, FOUNDATION, ARCHITECTURE, *CHAPTER_ONE)),
+            ],
+            view=RecordingView(interactive=False),
+        )
+        self.assertEqual(app.cli.EXIT_AWAITING_HUMAN, first)
+        self.assertIn('human_checkpoint_required: "true"', (project / "PROJECT_STATE.yaml").read_text(encoding="utf-8"))
+
+        bypass = app.session_main(
+            ["resume", str(project), "--yes", "--fake-responses", str(self.responses(*CHAPTER_TWO, AUDIT, SCORE, PACKAGE))],
+            view=RecordingView(interactive=False),
+        )
+        self.assertEqual(app.cli.EXIT_AWAITING_HUMAN, bypass)
+        self.assertFalse((project / "manuscript" / "chapters" / "chapter-02.md").exists())
+
+        approve(project, "chapter-01")
+        completed = app.session_main(
+            ["resume", str(project), "--yes", "--fake-responses", str(self.responses(*CHAPTER_TWO, AUDIT, SCORE, PACKAGE))],
+            view=RecordingView(interactive=False),
+        )
+        self.assertEqual(app.cli.EXIT_OK, completed)
+        self.assertTrue((project / "manuscript" / "chapters" / "chapter-02.md").exists())
 
     def test_resume_without_a_project_fails_with_a_readable_message(self) -> None:
         view = RecordingView(interactive=False)
