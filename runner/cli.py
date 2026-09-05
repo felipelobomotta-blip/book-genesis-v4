@@ -9,7 +9,7 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runner.adapters import AdapterError, AwaitingManual  # noqa: E402
-from runner.book import run_book  # noqa: E402
+from runner.book import run_book, run_polish  # noqa: E402
 from runner.brief import TAIL_WORDS, build_chapter_brief, tail_words  # noqa: E402
 from runner.chapter import AwaitingHuman, approve, clean_chapter, run_chapter  # noqa: E402
 from runner.constants import ROLES, load_model_map  # noqa: E402
@@ -150,6 +150,16 @@ def build_parser() -> argparse.ArgumentParser:
     resume_parser.add_argument("--chapters", type=int, default=None, help="Stop after this many chapters")
     resume_parser.add_argument("--fake-responses", default="")
 
+    polish_parser = subparsers.add_parser(
+        "polish",
+        help="Judge and revise chapters that already exist; the writer is never called (ADR 0006)",
+    )
+    polish_parser.add_argument("path")
+    polish_parser.add_argument("--from", dest="start", type=int, default=None)
+    polish_parser.add_argument("--to", dest="end", type=int, default=None)
+    polish_parser.add_argument("--manual", action="store_true", help="No CLI: write each prompt to work/manual/ and wait for a pasted reply")
+    polish_parser.add_argument("--fake-responses", default="", help="Scripted responses for every role (tests)")
+
     return parser
 
 
@@ -158,6 +168,13 @@ def main(argv: list[str] | None = None) -> int:
         argv = sys.argv[1:]
     if not argv:
         argv = ["new"] if (load_user_config() is not None or any(available_adapters().values())) else ["setup"]
+    # runner.app is the canonical front door for the guided workflow.  Importing
+    # here, after this module initialized its command layer, avoids the app->cli
+    # circular import while preserving direct ``python runner/cli.py new`` use.
+    if argv and argv[0] in {"new", "resume"}:
+        from runner.app import session_main
+
+        return session_main(argv)
     parser = build_parser()
     args = parser.parse_args(argv)
     _utf8_console()
@@ -248,6 +265,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "book":
         return _book_command(args, target)
+
+    if args.command == "polish":
+        return _polish_command(args, target)
 
     if args.command == "run-phase":
         return _run_phase_command(args, target)
@@ -346,10 +366,17 @@ def _setup_command(args: argparse.Namespace) -> int:
     path = Path(args.path) if args.path else None
     choose = interactive_choose if supports_interactive() else None
     try:
-        run_setup(ask=ask, secret=secret, say=print, path=path, choose=choose)
+        result = run_setup(ask=ask, secret=secret, say=print, path=path, choose=choose, return_status=True)
     except KeyboardInterrupt:
         print("\ncancelled")
+        return 130
+    if result.status == "failed":
+        print("setup failed; no configuration was saved")
         return EXIT_FAILURE
+    if result.status == "skipped":
+        print("setup skipped; no configuration was saved")
+    elif result.status == "kept":
+        print(f"setup kept existing configuration at {result.path}")
     return EXIT_OK
 
 
@@ -504,6 +531,32 @@ def _book_command(args: argparse.Namespace, target: Path) -> int:
     print(f"report: {target / 'RUN_REPORT.md'}")
     if result.status == "awaiting_human":
         return EXIT_AWAITING_HUMAN
+    if result.status == "blocked":
+        return EXIT_BLOCKED
+    return EXIT_OK
+
+
+def _polish_command(args: argparse.Namespace, target: Path) -> int:
+    try:
+        setup = _setup(args, target)
+        result = run_polish(
+            target,
+            setup.adapters,
+            setup.models,
+            start=args.start,
+            end=args.end,
+            progress=_progress,
+        )
+    except AwaitingManual as exc:
+        print(f"Awaiting a pasted reply: {exc}")
+        return EXIT_AWAITING_MANUAL
+    except (AdapterError, ValueError, FileNotFoundError) as exc:
+        print(f"Polish failed: {exc}")
+        return EXIT_FAILURE
+
+    print(f"polish: {result.status} (chapters polished this run: {result.chapters_done or 'none'})")
+    print(result.message)
+    print(f"report: {target / 'RUN_REPORT.md'}")
     if result.status == "blocked":
         return EXIT_BLOCKED
     return EXIT_OK

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "book-genesis"
-version = "5.0.0"
-description = "From one idea to a blind-judged manuscript. A runner that drives your own model providers; no API keys stored in the repo."
+version = "5.0.0b1"
+description = "Your idea, your story. An open-source writing workflow with model feedback, saved revisions, and local manuscript exports."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -20,4 +20,4 @@ book-genesis = "runner.app:main"
 packages = ["runner"]
 
 [tool.setuptools.package-data]
-runner = ["config/*.yaml"]
+runner = ["config/*.yaml", "data/**/*"]

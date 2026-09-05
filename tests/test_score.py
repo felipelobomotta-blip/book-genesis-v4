@@ -77,7 +77,7 @@ class ScoreTests(unittest.TestCase):
         self.write("chapter-02-judge-1.md", SINGLE_YES)
         card = genesis_score(self.project)
         self.assertEqual(10.0, card.score)
-        self.assertEqual("readers turned every page", card.band())
+        self.assertEqual("model readers turned every page", card.band())
 
     def test_every_component_is_visible_and_weighted(self) -> None:
         # panel 2/3 (0.4 * 0.667), first draft 1 of 2 (0.3 * 0.5), accepted 2 of 2 (0.2), remembered 1 of 2 (0.1 * 0.5)
@@ -96,7 +96,7 @@ class ScoreTests(unittest.TestCase):
         text = card.markdown()
         self.assertIn("**6.7 / 10**", text)
         self.assertIn("(40%)", text)
-        self.assertIn("Nothing was graded by the model that wrote it", text)
+        self.assertIn("model independence depends on the configured roles", text)
 
     def test_a_blocked_chapter_is_named_and_capped(self) -> None:
         (self.project / "RUN_REPORT.md").write_text(report(line(1, "accepted", 0), line(2, "blocked", 3, "no")), encoding="utf-8")

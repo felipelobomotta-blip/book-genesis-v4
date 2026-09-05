@@ -44,6 +44,29 @@ def load_generic_adapters() -> Dict[str, str]:
                 templates[name.strip().lower()] = command
     return templates
 
+
+def load_generic_adapter_requirements() -> Dict[str, List[str]]:
+    """Executables required by each declared CLI adapter.
+
+    A bridge is itself run by Python, but Python being installed says nothing about
+    the CLI wrapped by that bridge.  ``requires`` lets a declaration make that
+    dependency explicit.  Older/user declarations without it retain the useful
+    default of checking the command head itself.
+    """
+    requirements: Dict[str, List[str]] = {}
+    for path in (ADAPTERS_PATH, user_adapters_path()):
+        if not path.exists():
+            continue
+        for name, values in load_simple_yaml_map(path).items():
+            normalized = name.strip().lower()
+            declared = values.get("requires", [])
+            if isinstance(declared, list):
+                items = [str(item).strip() for item in declared]
+            else:
+                items = [part.strip() for part in str(declared).split(",")]
+            requirements[normalized] = [item for item in items if item]
+    return requirements
+
 ROLES = ("writer", "disruptor", "judge", "editor", "architect", "extractor")
 
 

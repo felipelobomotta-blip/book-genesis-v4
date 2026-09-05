@@ -9,7 +9,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from runner.onboarding import Detection  # type: ignore  # noqa: E402
-from runner.setup import run_setup, tag_model  # type: ignore  # noqa: E402
+from runner.setup import SetupOutcome, run_setup, tag_model  # type: ignore  # noqa: E402
 from runner.userconfig import load_user_config  # type: ignore  # noqa: E402
 
 
@@ -135,6 +135,33 @@ class QuickStartTests(unittest.TestCase):
         self.assertIsNone(result)
         self.assertFalse(self.path.exists())
         self.assertIn("401", io.transcript)
+
+    def test_status_mode_distinguishes_failed_verification_from_skip(self) -> None:
+        failed_io = ScriptedIO(answers=["1"])
+        failed = run_setup(
+            ask=failed_io.ask,
+            secret=failed_io.secret,
+            say=failed_io.say,
+            path=self.path,
+            detections=ONE_KEY,
+            verifier=lambda *_: (False, "refused"),
+            prober=probed,
+            return_status=True,
+        )
+        self.assertEqual(SetupOutcome("failed"), failed)
+
+        skipped_io = ScriptedIO(answers=["3"])
+        skipped = run_setup(
+            ask=skipped_io.ask,
+            secret=skipped_io.secret,
+            say=skipped_io.say,
+            path=self.path,
+            detections=ONE_KEY,
+            verifier=always_ok,
+            prober=probed,
+            return_status=True,
+        )
+        self.assertEqual(SetupOutcome("skipped"), skipped)
 
     def test_single_provider_warns_that_it_will_judge_itself_and_names_the_free_fix(self) -> None:
         io = ScriptedIO(answers=["1"])
@@ -334,6 +361,22 @@ class ReRunTests(unittest.TestCase):
         transcript = again.transcript.lower()
         self.assertIn("keep", transcript)
         self.assertIn("reset", transcript)
+
+    def test_status_mode_marks_existing_config_as_kept(self) -> None:
+        first = ScriptedIO(answers=["1"])
+        run_setup(ask=first.ask, secret=first.secret, say=first.say, path=self.path, detections=BOTH_CLIS, verifier=always_ok, prober=probed)
+        again = ScriptedIO(answers=["1"])
+        outcome = run_setup(
+            ask=again.ask,
+            secret=again.secret,
+            say=again.say,
+            path=self.path,
+            detections=BOTH_CLIS,
+            verifier=always_ok,
+            prober=probed,
+            return_status=True,
+        )
+        self.assertEqual(SetupOutcome("kept", self.path), outcome)
 
     def test_change_keeps_the_stored_providers_and_keys(self) -> None:
         # Bug seen 2026-09-03: a re-run rebuilt the config from scratch and the person's

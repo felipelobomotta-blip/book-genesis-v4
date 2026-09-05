@@ -154,6 +154,7 @@ class PlainView:
     def score(self, card: ScoreCard) -> None:
         self._say("")
         self._say(card.markdown().rstrip())
+        self._say("Reader-model signals are simulated internal evidence; they are not human reading, later memory, literary quality, or publication readiness.")
 
     def finish(self, paths: Dict[str, "os.PathLike[str]"]) -> None:
         self._say("")
@@ -316,7 +317,7 @@ class RichView:
             table.add_row(component.label, component.detail, f"{int(component.weight * 100)}%")
         if card.blocked:
             table.add_row("Blocked", ", ".join(f"chapter {n}" for n in card.blocked), "")
-        note = Text("Every number comes from a blind reader who never saw the outline. Nothing was graded by the model that wrote it.", style="dim")
+        note = Text("Judges receive prose without the outline. Model independence depends on the configured roles. These are internal model-reader and revision signals, not human reading, later memory, literary quality, or publication readiness.", style="dim")
         self.console.print(
             Panel(
                 Group(headline, Text(""), table, Text(""), note),

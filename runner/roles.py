@@ -24,11 +24,13 @@ from runner.adapters import (
     GenericCliAdapter,
     ManualAdapter,
     OpenAICompatibleAdapter,
+    command_template_argv,
 )
 from runner.constants import (
     DEFAULT_PERSONAS,
     ROLES,
     PanelSpec,
+    load_generic_adapter_requirements,
     RoleModel,
     load_generic_adapters,
     load_model_map,
@@ -67,9 +69,19 @@ class RunSetup:
 
 def available_adapters() -> Dict[str, bool]:
     found = {name: shutil.which(name) is not None for name in KNOWN_CLIS}
+    requirements = load_generic_adapter_requirements()
     for name, template in load_generic_adapters().items():
-        head = template.split()[0].strip('"') if template.split() else ""
-        found[name] = bool(head) and shutil.which(head) is not None
+        try:
+            argv = command_template_argv(template)
+        except AdapterError:
+            found[name] = False
+            continue
+        head = argv[0] if argv else ""
+        needed = requirements.get(name) or ([head] if head else [])
+        found[name] = bool(needed) and all(
+            shutil.which(executable) is not None or Path(executable).is_file()
+            for executable in needed
+        )
     return found
 
 
@@ -102,17 +114,33 @@ def plan_roles(available: Optional[Dict[str, bool]] = None, user_config=None) ->
     warnings: List[str] = []
     writer, judge = roles["writer"], roles["judge"]
     if writer.adapter == judge.adapter:
-        other = [name for name in installed if name != writer.adapter]
-        if other:
-            roles["judge"] = RoleModel(other[0], _default_model(other[0], "judge"))
-        else:
+        # Respect explicit user choice (e.g. "muse spark pra fazer tudo") — ADR 0002
+        # bias avoidance is a default, not an override.
+        explicitly_same = (
+            user_config is not None
+            and "judge" in user_config.roles
+            and user_config.roles["judge"].adapter == writer.adapter
+        )
+        if explicitly_same:
             if not judge.model or judge.model == writer.model:
-                roles["judge"] = RoleModel(writer.adapter, _different_model(writer.adapter, writer.model))
+                # Keep exactly what the user asked for; still surface a warning
+                pass
             warnings.append(
                 f"single family: writer and judge both run on `{writer.adapter}` "
-                f"(judge model {roles['judge'].model or 'default'}). A judge from another family is a stronger "
-                "gate; install a second CLI when you can."
+                f"as explicitly configured. A judge from another family is a stronger gate."
             )
+        else:
+            other = [name for name in installed if name != writer.adapter]
+            if other:
+                roles["judge"] = RoleModel(other[0], _default_model(other[0], "judge"))
+            else:
+                if not judge.model or judge.model == writer.model:
+                    roles["judge"] = RoleModel(writer.adapter, _different_model(writer.adapter, writer.model))
+                warnings.append(
+                    f"single family: writer and judge both run on `{writer.adapter}` "
+                    f"(judge model {roles['judge'].model or 'default'}). A judge from another family is a stronger "
+                    "gate; install a second CLI when you can."
+                )
 
     panel: List[PanelSpec] = []
     user_panel = user_config is not None and bool(user_config.panel)

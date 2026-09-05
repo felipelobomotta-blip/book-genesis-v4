@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -56,6 +57,18 @@ class AppRoutingTests(unittest.TestCase):
         self.assertTrue((project / "manuscript" / "chapters" / "chapter-02.md").exists())
         self.assertEqual([], view.checkpoints)  # no terminal: autonomous, exactly as ADR 0002
         self.assertEqual(10.0, view.card.score)
+
+    def test_new_refuses_existing_book_before_loading_provider(self) -> None:
+        project = self.tempdir / "existing"
+        scaffold_project(project, idea="original idea", adapter="manual", model_name="", language="en")
+        original = (project / "PROJECT_STATE.yaml").read_bytes()
+        view = RecordingView(interactive=False)
+        with patch.object(app, "build_setup") as setup:
+            code = app.session_main(["new", "--idea", "different idea", "--language", "en", "--path", str(project)], view=view)
+        self.assertEqual(app.cli.EXIT_USAGE, code)
+        setup.assert_not_called()
+        self.assertEqual(original, (project / "PROJECT_STATE.yaml").read_bytes())
+        self.assertIn("resume", view.calls[-1][1])
 
     def test_resume_continues_an_existing_project(self) -> None:
         project = self.tempdir / "book"

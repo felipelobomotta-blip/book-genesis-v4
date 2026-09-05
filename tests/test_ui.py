@@ -86,7 +86,7 @@ class RichViewTests(unittest.TestCase):
         self.assertIn("readers kept going", text)
         self.assertIn("3 of 3 blind readers would turn the page", text)
         self.assertIn("40%", text)
-        self.assertIn("never saw the outline", text)
+        self.assertIn("receive prose without the outline", text)
 
     def test_a_failure_is_red_and_says_what_happened(self) -> None:
         text = rendered(lambda view: view.stage_fail("Drafting", "chapter 2 blocked after 3 revision cycles"))

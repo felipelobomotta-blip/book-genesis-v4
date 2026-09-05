@@ -1,3 +1,5 @@
+> **Historical material.** This page describes earlier experiments or proposals. Its scores, benchmarks, features and demos are not claims about Imagination Edition. Use the [current README](README.md) and [validation record](docs/validation.md) for the beta.
+
 # Book Genesis Casebook
 
 This showcase documents 10 book projects used to stress-test Book Genesis across genres, languages, and pipeline versions. Some cases have public artifacts in this repository. Others are local production cases summarized without private manuscript text.

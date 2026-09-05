@@ -14,7 +14,9 @@ from typing import List, Optional
 
 from runner import cli
 from runner.adapters import AdapterError
+from runner.export import export_project
 from runner.filesystem import scaffold_project
+from runner.review import build_review
 from runner.roles import available_adapters, build_role_adapters
 from runner.session import run_session
 from runner.ui import make_view
@@ -30,12 +32,14 @@ EXIT_CODES = {
 }
 SESSION_COMMANDS = ("new", "resume")
 HELP_FLAGS = ("-h", "--help", "help")
-OVERVIEW = """book-genesis - turn one idea into a manuscript a stranger would keep reading.
+OVERVIEW = """book-genesis - develop your idea with drafts, model feedback, and saved revisions.
 
   book-genesis setup            choose your providers and models. Once.
-  book-genesis new              give it an idea; watch, agree, get the book and its score
+  book-genesis new              give it an idea; guide the writing and review process
   book-genesis resume <folder>  continue where you stopped
   book-genesis doctor           what will run where, and whether every key is set
+  book-genesis review <folder>  read chapters and safe local version history in a browser
+  book-genesis export <folder> --format markdown|epub  create a local canonical export
 
 Useful flags on `new` and `resume`:
   --yes        never ask (also what happens with no terminal: a script, cron, CI)
@@ -46,6 +50,7 @@ Useful flags on `new` and `resume`:
 
 One step at a time: brief, chapter, book, polish, judge, panel, run-phase, approve,
 init, status, validate, demo. Run `book-genesis <command> --help` for any of them.
+An audit that requests revision stops completion until the manuscript is revised.
 """
 
 
@@ -62,6 +67,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     if argv[0] in SESSION_COMMANDS:
         cli._utf8_console()
         return session_main(argv)
+    if argv[0] == "review":
+        cli._utf8_console()
+        return review_main(argv[1:])
+    if argv[0] == "export":
+        cli._utf8_console()
+        return export_main(argv[1:])
     return cli.main(argv)
 
 
@@ -93,6 +104,9 @@ def _shared(parser: argparse.ArgumentParser) -> None:
 def session_main(argv: List[str], view=None) -> int:
     args = build_parser().parse_args(argv)
     view = view or make_view(plain=args.plain)
+    if args.chapters is not None and args.chapters <= 0:
+        view.fail("--chapters must be a positive integer.")
+        return cli.EXIT_USAGE
 
     if args.command == "new":
         idea = args.idea.strip() or view.ask("What is the book about? One sentence is enough", "")
@@ -101,8 +115,14 @@ def session_main(argv: List[str], view=None) -> int:
             return cli.EXIT_USAGE
         language = args.language.strip() or view.ask("Language", "en")
         project = Path(args.path) if args.path else Path("books") / cli._slug(idea)
-        if not (project / "PROJECT_STATE.yaml").exists():
+        if (project / "PROJECT_STATE.yaml").exists():
+            view.fail(f"A book already exists at {project}. Use `book-genesis resume` or choose a new --path.")
+            return cli.EXIT_USAGE
+        try:
             scaffold_project(project, idea=idea, language=language, adapter="auto", model_name="auto")
+        except (OSError, ValueError) as exc:
+            view.fail(f"Could not create the project: {exc}")
+            return cli.EXIT_FAILURE
     else:
         project = Path(args.path)
         if not (project / "PROJECT_STATE.yaml").exists():
@@ -117,10 +137,47 @@ def session_main(argv: List[str], view=None) -> int:
 
     try:
         result = run_session(project, setup, view, yes=args.yes or not view.interactive, human=args.human, chapters=args.chapters)
+    except OSError as exc:
+        view.fail(f"Could not finish the file operation: {exc}. Continue with: book-genesis resume {project}")
+        return cli.EXIT_FAILURE
     except KeyboardInterrupt:
         view.fail(f"\ninterrupted; continue any time with: book-genesis resume {project}")
         return cli.EXIT_FAILURE
     return EXIT_CODES.get(result.status, cli.EXIT_FAILURE)
+
+
+def review_main(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(prog="book-genesis review", description="Create a local, self-contained reading and revision page.")
+    parser.add_argument("project")
+    parser.add_argument("--open", action="store_true", help="Open the generated local file in the default browser")
+    args = parser.parse_args(argv)
+    try:
+        output = build_review(Path(args.project))
+        print(f"review: {output}")
+        if args.open:
+            import webbrowser
+            if not webbrowser.open(output.as_uri()):
+                print(f"Could not open automatically; open this local file: {output}")
+    except (OSError, ValueError) as exc:
+        print(f"Review failed: {exc}")
+        return cli.EXIT_FAILURE
+    return cli.EXIT_OK
+
+
+def export_main(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(prog="book-genesis export", description="Export canonical chapters locally; never uploads the manuscript.")
+    parser.add_argument("project")
+    parser.add_argument("--format", choices=("markdown", "epub"), required=True)
+    parser.add_argument("--output", help="Destination file (default: project/exports/manuscript.<format>)")
+    parser.add_argument("--overwrite", action="store_true", help="Allow replacing an existing export file")
+    args = parser.parse_args(argv)
+    try:
+        output = export_project(Path(args.project), args.format, Path(args.output) if args.output else None, args.overwrite)
+        print(f"export: {output}")
+    except (OSError, ValueError) as exc:
+        print(f"Export failed: {exc}")
+        return cli.EXIT_FAILURE
+    return cli.EXIT_OK
 
 
 def build_setup(project: Path, *, fake_responses: str = "", manual: bool = False):

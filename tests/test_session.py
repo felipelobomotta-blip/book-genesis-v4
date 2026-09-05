@@ -41,7 +41,7 @@ FOUNDATION = (
     "=== FILE: artifacts/06-emotional-curve.md ===\n# Curve\n\nCURVE-SENTINEL\n"
 )
 ARCHITECTURE = "=== FILE: artifacts/05-outline.md ===\n" + OUTLINE + "\n=== FILE: artifacts/07-opening-strategy.md ===\n# Opening\n\nOPENING-SENTINEL\n"
-AUDIT = "=== FILE: artifacts/08-adversarial-audit.md ===\n# Audit\n\nAUDIT-SENTINEL\n"
+AUDIT = "=== FILE: artifacts/08-adversarial-audit.md ===\n# Audit\n\nAUDIT-SENTINEL\n\naudit_status: pass\n"
 SCORE = "=== FILE: artifacts/09-genesis-score-codex.md ===\n# Diagnostic\n\nSCORE-SENTINEL\n"
 PACKAGE = "=== FILE: artifacts/10-editorial-package.md ===\n# Package\n\nPACKAGE-SENTINEL\n"
 CHAPTER_ONE = [DRAFT, DISRUPTED, YES, YES, YES]  # writer, disruptor, three panel seats
@@ -153,9 +153,10 @@ class SessionTests(unittest.TestCase):
         self.assertNotIn("# Outline", view.checkpoints[1][1])
         chapter_body = view.checkpoints[2][1]
         self.assertNotIn("# Chapter 1: The Watch Room", chapter_body)
-        self.assertIn("3 of 3 blind readers would turn the page", chapter_body)
+        self.assertIn("3 of 3 model readers would turn the page", chapter_body)
         self.assertIn("the hum", chapter_body)  # what they remembered
         self.assertIn("DISRUPTED-SENTINEL", chapter_body)  # the opening of the prose itself
+        self.assertEqual(20, chapter_body.count("The console blinked."))  # whole prose, no excerpt truncation
         self.assertIn("Enter", view.checkpoints[2][2])
 
     def test_notes_at_the_brief_rerun_intake_with_them(self) -> None:

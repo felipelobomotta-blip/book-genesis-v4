@@ -1,15 +1,18 @@
 """Model adapters: the only place the runner talks to a model.
 
-Every adapter exposes ``complete(prompt, model=...) -> str``. The model never gets
-tools; the runner does all file I/O. CLI adapters shell out to locally authenticated
-command-line tools, so no API key is ever read or stored here. The generic adapter
-runs any command declared in runner/config/adapters.yaml; the manual adapter writes
-the prompt to disk and waits for a person to paste the reply (ADR 0002).
+Every adapter exposes ``complete(prompt, model=...) -> str``. The runner owns file
+I/O. Claude is started in safe mode with its tool list disabled. Codex versions supported by this
+runner have no equivalent no-tools flag, so it is isolated with its ephemeral,
+read-only sandbox and without user/project configuration; this constrains writes but
+is not a promise that it cannot read a permitted workspace. Generic CLIs follow their
+own declared capability model. The manual adapter writes the prompt to disk and waits
+for a person to paste the reply (ADR 0002).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -24,7 +27,43 @@ import urllib.error
 import urllib.request
 
 DEFAULT_MAX_TOKENS = 16000
+CLEANUP_WAIT_SECONDS = 1
 Transport = Callable[[str, Dict[str, str], bytes, int], Tuple[int, bytes]]
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def command_template_argv(command_template: str, model: str = "") -> List[str]:
+    """Parse a configured command once and keep model text in one argv element."""
+    try:
+        tokens = shlex.split(command_template, posix=True)
+    except ValueError as exc:
+        raise AdapterError(f"invalid adapter command template: {exc}") from exc
+    return [token.replace("{model}", model) for token in tokens if token.replace("{model}", model)]
+
+
+def resolve_repo_relative_argv(tokens: Sequence[str]) -> List[str]:
+    """Resolve repository files without splitting paths that contain spaces."""
+    rewritten: List[str] = []
+    for token in tokens:
+        candidate = Path(token)
+        if not candidate.is_absolute():
+            repo_candidate = REPO_ROOT / candidate
+            if repo_candidate.exists():
+                rewritten.append(str(repo_candidate))
+                continue
+        rewritten.append(token)
+    return rewritten
+
+
+def resolve_repo_relative_tokens(command: str) -> str:
+    """Compatibility helper for callers that still expect a rendered string.
+
+    Declared command templates such as ``python runner/bridge_gemini.py {model}``
+    use repo-relative paths, but execution uses ``resolve_repo_relative_argv``
+    so spaces survive unchanged.
+    """
+    return shlex.join(resolve_repo_relative_argv(command_template_argv(command)))
 
 
 class AdapterError(RuntimeError):
@@ -87,13 +126,24 @@ class ClaudeCliAdapter:
             "--output-format",
             "text",
             "--no-session-persistence",
+            "--safe-mode",
+            "--disable-slash-commands",
+            "--tools",
+            "",
         ]
         if model:
             command += ["--model", model]
         return command
 
     def complete(self, prompt: str, *, model: str = "") -> str:
-        result = _run(self.build_command(model), prompt, timeout_seconds=self.timeout_seconds)
+        # The CLI must not inherit the project's working directory, where
+        # instructions or files could become ambient context. Claude safe mode
+        # retains OAuth while disabling project customizations and tools.
+        try:
+            with _temporary_workdir("book-genesis-claude-") as workdir:
+                result = _run(self.build_command(model), prompt, timeout_seconds=self.timeout_seconds, cwd=workdir)
+        except subprocess.TimeoutExpired as exc:
+            raise AdapterError(f"claude timed out after {self.timeout_seconds} seconds") from exc
         if result.returncode != 0:
             raise AdapterError(f"claude exited {result.returncode}: {result.stderr.strip()[:800]}")
         text = result.stdout.strip()
@@ -118,9 +168,9 @@ class CodexCliAdapter:
         last_message_file: Path | None = None,
         workdir: Path | None = None,
     ) -> List[str]:
-        # --ignore-user-config skips the MCP servers and skills in ~/.codex/config.toml
-        # (auth still works). The model gets no tools here, so that context is pure cost:
-        # measured 40 s and ~20k tokens per call before a single word of the prompt.
+        # Current Codex exposes no no-tools switch. Keep the agent ephemeral and
+        # read-only without loading its user configuration. We do not pass an
+        # ignore-rules flag; exec-policy behavior remains the CLI's own contract.
         command = _resolve(self.executable) + [
             "exec",
             "--skip-git-repo-check",
@@ -138,18 +188,22 @@ class CodexCliAdapter:
         return command
 
     def complete(self, prompt: str, *, model: str = "") -> str:
-        with tempfile.TemporaryDirectory(prefix="book-genesis-codex-") as tmp:
-            last_message = Path(tmp) / "last-message.md"
-            result = _run(
-                self.build_command(model, last_message, Path(tmp)),
-                prompt,
-                timeout_seconds=self.timeout_seconds,
-            )
-            if result.returncode != 0:
-                raise AdapterError(f"codex exited {result.returncode}: {result.stderr.strip()[:800]}")
-            if not last_message.exists():
-                raise AdapterError("codex did not write the last-message file")
-            text = last_message.read_text(encoding="utf-8", errors="replace").strip()
+        try:
+            with _temporary_workdir("book-genesis-codex-") as tmp:
+                last_message = Path(tmp) / "last-message.md"
+                result = _run(
+                    self.build_command(model, last_message, Path(tmp)),
+                    prompt,
+                    timeout_seconds=self.timeout_seconds,
+                    cwd=tmp,
+                )
+                if result.returncode != 0:
+                    raise AdapterError(f"codex exited {result.returncode}: {result.stderr.strip()[:800]}")
+                if not last_message.exists():
+                    raise AdapterError("codex did not write the last-message file")
+                text = last_message.read_text(encoding="utf-8", errors="replace").strip()
+        except subprocess.TimeoutExpired as exc:
+            raise AdapterError(f"codex timed out after {self.timeout_seconds} seconds") from exc
         if not text:
             raise AdapterError("codex returned empty output")
         _warn_if_undecodable(text, "codex")
@@ -169,17 +223,29 @@ class GenericCliAdapter:
         self.timeout_seconds = timeout_seconds
 
     def render_command(self, model: str = "") -> str:
-        return " ".join(self.command_template.replace("{model}", model).split())
+        return shlex.join(command_template_argv(self.command_template, model))
 
-    def complete(self, prompt: str, *, model: str = "") -> str:
-        command = self.render_command(model)
-        head, rest = _split_head(command)
+    def build_command(self, model: str = "") -> List[str]:
+        command = resolve_repo_relative_argv(command_template_argv(self.command_template, model))
+        if not command:
+            raise AdapterError(f"adapter {self.name} has an empty command template")
+        head = command[0]
         resolved = shutil.which(head)
+        if resolved is None and Path(head).is_file():
+            resolved = head
         if resolved is None:
             raise AdapterError(f"{head!r} (adapter {self.name}) was not found on PATH")
         if resolved.lower().endswith((".cmd", ".bat")):
-            command = f'cmd /c "{resolved}" {rest}'.strip()
-        result = _run(command, prompt, timeout_seconds=self.timeout_seconds)
+            return ["cmd", "/c", resolved, *command[1:]]
+        return [resolved, *command[1:]]
+
+    def complete(self, prompt: str, *, model: str = "") -> str:
+        command = self.build_command(model)
+        try:
+            with _temporary_workdir("book-genesis-generic-") as workdir:
+                result = _run(command, prompt, timeout_seconds=self.timeout_seconds, cwd=workdir)
+        except subprocess.TimeoutExpired as exc:
+            raise AdapterError(f"{self.name} timed out after {self.timeout_seconds} seconds") from exc
         if result.returncode != 0:
             raise AdapterError(f"{self.name} exited {result.returncode}: {result.stderr.strip()[:800]}")
         text = result.stdout.strip()
@@ -343,18 +409,31 @@ def _resolve(executable: str) -> List[str]:
     return [path]
 
 
-def _split_head(command: str) -> Tuple[str, str]:
-    """First token of a command line (quotes respected) and the rest."""
-    text = command.strip()
-    if text.startswith('"'):
-        end = text.find('"', 1)
-        if end != -1:
-            return text[1:end], text[end + 1 :].strip()
-    parts = text.split(None, 1)
-    return parts[0], (parts[1] if len(parts) > 1 else "")
+@contextmanager
+def _temporary_workdir(prefix: str):
+    """Do not let a Windows cleanup error replace the provider timeout."""
+    directory = tempfile.TemporaryDirectory(prefix=prefix)
+    timed_out = False
+    try:
+        yield directory.name
+    except subprocess.TimeoutExpired:
+        timed_out = True
+        raise
+    finally:
+        try:
+            directory.cleanup()
+        except OSError:
+            if not timed_out:
+                raise
 
 
-def _run(command: Union[str, Sequence[str]], prompt: str, *, timeout_seconds: int) -> subprocess.CompletedProcess:
+def _run(
+    command: Union[str, Sequence[str]],
+    prompt: str,
+    *,
+    timeout_seconds: int,
+    cwd: Optional[Union[str, Path]] = None,
+) -> subprocess.CompletedProcess:
     env = dict(os.environ)
     env.pop("CLAUDECODE", None)  # allow `claude -p` to run from inside a Claude Code session
     env["PYTHONIOENCODING"] = "utf-8"
@@ -363,17 +442,55 @@ def _run(command: Union[str, Sequence[str]], prompt: str, *, timeout_seconds: in
         popen_args = command if os.name == "nt" else shlex.split(command)
     else:
         popen_args = list(command)
-    return subprocess.run(
+    process = subprocess.Popen(
         popen_args,
-        input=prompt,
-        capture_output=True,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",
         errors="replace",
-        timeout=timeout_seconds,
         env=env,
-        check=False,
+        cwd=str(cwd) if cwd is not None else None,
     )
+    try:
+        stdout, stderr = process.communicate(input=prompt, timeout=timeout_seconds)
+    except subprocess.TimeoutExpired as exc:
+        try:
+            _terminate_timed_out_process(process)
+            try:
+                process.communicate(timeout=CLEANUP_WAIT_SECONDS)
+            except subprocess.TimeoutExpired:
+                # This is still only the process we created, never a name/global kill.
+                try:
+                    process.kill()
+                    process.communicate(timeout=CLEANUP_WAIT_SECONDS)
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+        except OSError:
+            # Cleanup cannot replace the timeout that triggered it.
+            pass
+        raise exc
+    return subprocess.CompletedProcess(popen_args, process.returncode, stdout, stderr)
+
+
+def _terminate_timed_out_process(process: subprocess.Popen) -> None:
+    """Bounded Windows-only cleanup for a timed-out wrapper and its own children."""
+    if os.name != "nt" or process.poll() is not None:
+        return
+    try:
+        subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=CLEANUP_WAIT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        # The direct `process.kill()` fallback in `_run` still targets only this PID.
+        pass
 
 
 def _warn_if_undecodable(text: str, adapter_name: str) -> None:

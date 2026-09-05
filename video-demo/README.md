@@ -1,3 +1,5 @@
+> **Historical material.** This page describes earlier experiments or proposals. Its scores, benchmarks, features and demos are not claims about Imagination Edition. Use the [current README](../README.md) and [validation record](../docs/validation.md) for the beta.
+
 # Best Seller Studio — Demo Video
 
 Remotion project for the ~32-second product demo video.

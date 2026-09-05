@@ -1,5 +1,30 @@
 # Changelog
 
+## 5.0.0-beta.1 — Imagination Edition — 2026-09-05
+
+Creativity comes first. This public beta makes the writing process easier to inspect, continue and question.
+
+### Added and improved
+
+- Guided sessions with three author checkpoints, persistent notes and safe resume.
+- Complete-response validation, recoverable phase publication and immutable chapter-attempt history.
+- A manuscript audit that reads canonical prose and blocks completion when revision is needed.
+- A local browser reader with chapter navigation, revision comparison and editorial status.
+- Canonical Markdown/EPUB exports and a self-contained wheel installable outside the source checkout.
+- More reliable provider detection, portable CLI bridges, Windows path/timeout handling and truthful setup errors.
+- English and Portuguese documentation, architecture, vision, roadmap, contribution guide, a worked example and a complete marketing kit.
+
+### Evidence and scope
+
+- The preceding quality pass completed 279 local tests, package isolation checks, browser checks and a bounded real-provider exercise. See the [validation record](docs/validation.md) for final release checks and limitations.
+- A real audit rejected a structural ending flaw despite favorable model-reader signals. The beta now preserves that objection instead of treating the report file as approval.
+- Engineering assistance: **Astra in Codex**, with independent review and recorded tests. This credit does not make Astra a runtime dependency or imply an official OpenAI product.
+- Still a beta: no claim of human-reader preference, long-book reliability, guaranteed bestseller status or automatic structural repair.
+
+### Earlier development history
+
+Entries below record what earlier iterations proposed or implemented at the time. Old score thresholds and market claims are not the current specification.
+
 ## V5.0 — 2026-09-02 (branch `arch/runner-orchestrates`, unreleased)
 
 ### Changed: the runner orchestrates; the judge is blind

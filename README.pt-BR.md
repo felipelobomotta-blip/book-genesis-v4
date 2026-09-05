@@ -1,15 +1,5 @@
-# English Documentation Notice
+# Book Genesis documentation
 
-This repository now uses English as the canonical public language.
+The current release documentation is maintained in English. Start with the [English README](README.md) and [quick start](docs/quickstart.md).
 
-Read the main README:
-
-- [`README.md`](README.md)
-
-Reason:
-
-- GitHub discovery is global.
-- The target audience includes AI builders, writers, editors, and open-source users outside Brazil.
-- Marketing, docs, examples, release notes, and issue templates should stay in English.
-
-Portuguese project notes can live in private manuscript folders, but public repository positioning should remain English-first.
+The runner can still create projects in the language selected with `--language`.

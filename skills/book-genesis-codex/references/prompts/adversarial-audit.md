@@ -71,3 +71,6 @@ Read the opening promise, the ending, and the pitch logic as a skeptical literar
 - do not soften structural findings
 - do not mix diagnosis and repair in the same pass
 - if multiple passes fail, escalate to major rewrite rather than cosmetic revision
+# Gate status
+
+End the audit with exactly one standalone machine-readable line: `audit_status: pass`, `audit_status: revise`, or `audit_status: major_rewrite`. Use `pass` only when no revision is required. `revise` and `major_rewrite` preserve the diagnosis but block the pipeline.

@@ -52,6 +52,14 @@ class Preset:
     needs_key: bool = True
 
 
+@dataclass(frozen=True)
+class SetupOutcome:
+    """Machine-readable result for the CLI while preserving the legacy return value."""
+
+    status: str
+    path: Optional[Path] = None
+
+
 # The provider menu, in the order it is shown. The numbers/positions are part of the interface.
 # Defaults follow the providers' own docs (Anthropic: "start with Claude Opus 5"; Sonnet 5 is
 # "the best combination of speed and intelligence") and what this machine's CLIs actually
@@ -162,8 +170,16 @@ def run_setup(
     choose: Optional[Choose] = None,
     prober: Optional[Prober] = None,
     cache_path: Optional[Path] = None,
-) -> Optional[Path]:
-    """Returns the config path, or None when the person skipped or a check failed."""
+    return_status: bool = False,
+) -> Optional[Path] | SetupOutcome:
+    """Configure providers.
+
+    By default this keeps the original ``Path | None`` contract.  The command
+    layer can request ``return_status`` to distinguish a deliberate skip from a
+    rejected verification without inferring either from a missing path.
+    """
+    def outcome(status: str, config_path: Optional[Path] = None) -> Optional[Path] | SetupOutcome:
+        return SetupOutcome(status, config_path) if return_status else config_path
     target = user_config_path(path)
     check = verifier or _default_verifier
     models_of = lister or list_models
@@ -192,7 +208,7 @@ def run_setup(
         choice = picker("What do you want to do", ["Keep it as it is", "Change it (keeps the providers and keys already stored)", "Reset and start over (drops stored keys)"], 1)
         if choice == 1:
             say("Kept. Run `book-genesis doctor` to check it, or `book-genesis new` to write a book.")
-            return target
+            return outcome("kept", target)
         if choice == 3:
             say("Starting over. Stored provider keys are dropped.")
         elif existing is not None:
@@ -217,10 +233,12 @@ def run_setup(
     choice = picker("How do you want to run the models", options, 1 if plan else 2)
     if choice == 3:
         say("Skipped. Run `book-genesis setup` whenever you want.")
-        return None
+        return outcome("skipped")
     if choice == 1 and plan is not None:
-        return _quick(plan, ask, secret, say, target, check, providers)
-    return _custom(ask, secret, say, target, check, found, models_of, picker, cli_models_of, providers)
+        result = _quick(plan, ask, secret, say, target, check, providers)
+    else:
+        result = _custom(ask, secret, say, target, check, found, models_of, picker, cli_models_of, providers)
+    return outcome("saved" if result is not None else "failed", result)
 
 
 def _provider_entries(config: UserConfig) -> Dict[str, Dict[str, str]]:

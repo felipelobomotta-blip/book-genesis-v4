@@ -1,8 +1,7 @@
-"""The Genesis Score: one number, computed only from what blind readers did (ADR 0009).
+"""Internal model-reader and revision-process signals; no claim about human readers.
 
-Nothing here is self-graded. The judge never saw the outline; the panel never saw the
-writer's plan. The score says how the book behaved in front of readers, not how the writer
-felt about it. Four components, fixed weights, every number shown next to the score.
+Judging uses a separate prompt without the outline. Provider/model separation depends
+on configuration and is reported by the role planner, not guaranteed by this score.
 """
 
 from __future__ import annotations
@@ -10,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 import re
+import json
+import hashlib
 from typing import Dict, List, Optional, Tuple
 
 _CHAPTER_LINE = re.compile(
@@ -56,7 +57,7 @@ class ScoreCard:
         if self.blocked:
             return "a chapter never convinced the reader"
         if self.score >= 9.0:
-            return "readers turned every page"
+            return "model readers turned every page"
         if self.score >= 7.5:
             return "readers kept going; revisions did the rest"
         if self.score >= 6.0:
@@ -64,14 +65,14 @@ class ScoreCard:
         return "not there yet"
 
     def markdown(self) -> str:
-        lines = ["## Genesis Score", "", f"**{self.score:.1f} / 10**: {self.band()}.", ""]
+        lines = ["## Genesis Score (internal model-reader signal)", "", f"**{self.score:.1f} / 10**: {self.band()}.", ""]
         for component in self.components:
             lines.append(f"- {component.label}: {component.detail} ({int(component.weight * 100)}%)")
         if self.blocked:
             lines.append(f"- Blocked chapters: {', '.join(str(n) for n in self.blocked)}")
         lines += [
             "",
-            "Computed only from blind readers who never saw the outline. Nothing was graded by the model that wrote it.",
+            "Computed from model-reader signals and revision records. First-draft acceptance is a process metric; immediate `remember` is not late human memory. Judging uses a separate prompt; model independence depends on the configured roles. Older projects may lack a record linking a verdict to the current text.",
         ]
         return "\n".join(lines) + "\n"
 
@@ -81,8 +82,9 @@ def genesis_score(project: Path) -> ScoreCard:
     if not rows:
         return ScoreCard(0.0, 0, [], [])
     numbers = sorted(rows)
-    accepted = [n for n in numbers if rows[n].status == "accepted"]
-    blocked = [n for n in numbers if rows[n].status == "blocked"]
+    valid = {n for n in numbers if _accepted_verdict_file(project, n) is not None}
+    accepted = [n for n in numbers if rows[n].status == "accepted" and n in valid]
+    blocked = [n for n in numbers if rows[n].status == "blocked" or n not in valid]
     first_pass = [n for n in accepted if rows[n].cycles == 0]
     panel_yes, panel_seats, panel_detail = _panel_votes(project, rows)
     remembered = [n for n in numbers if _remembered(project, n)]
@@ -127,8 +129,8 @@ def chapter_rows(report: Path) -> Dict[int, ChapterRow]:
 def _panel_votes(project: Path, rows: Dict[int, ChapterRow]) -> Tuple[int, int, str]:
     yes = seats = 0
     for number in sorted(rows):
-        first = project / "evaluations" / f"chapter-{number:02d}-judge-1.md"
-        if not first.exists():
+        first = _accepted_verdict_file(project, number)
+        if first is None or not first.exists():
             continue
         match = _PANEL_LINE.search(first.read_text(encoding="utf-8"))
         if match:
@@ -136,21 +138,21 @@ def _panel_votes(project: Path, rows: Dict[int, ChapterRow]) -> Tuple[int, int, 
             seats += int(match.group("seats"))
     if seats:
         return yes, seats, f"{yes} of {seats} blind readers would turn the page"
-    # No panel ran (single judge only): the judge's first read of each chapter stands in.
+    # No panel ran: use the verdict attached to the accepted version of each chapter.
     first_reads = [n for n in rows if _first_read_turns_page(project, n)]
-    return len(first_reads), len(rows), f"no panel; the judge turned the page on {len(first_reads)} of {len(rows)} first reads"
+    return len(first_reads), len(rows), f"no panel; the model judge turned the page on {len(first_reads)} of {len(rows)} accepted versions"
 
 
 def _first_read_turns_page(project: Path, number: int) -> bool:
-    first = project / "evaluations" / f"chapter-{number:02d}-judge-1.md"
-    if not first.exists():
+    first = _accepted_verdict_file(project, number)
+    if first is None or not first.exists():
         return False
     block = _last_yaml_block(first.read_text(encoding="utf-8"))
     return bool(re.search(r"^turn_page:\s*(yes|true)\s*$", block, re.MULTILINE | re.IGNORECASE))
 
 
 def _remembered(project: Path, number: int) -> bool:
-    latest = _latest_judge_file(project, number)
+    latest = _accepted_verdict_file(project, number)
     if latest is None:
         return False
     block = _last_yaml_block(latest.read_text(encoding="utf-8"))
@@ -175,6 +177,37 @@ def _latest_judge_file(project: Path, number: int) -> Optional[Path]:
             if best is None or draft > best[0]:
                 best = (draft, path)
     return best[1] if best else None
+
+
+def _accepted_verdict_file(project: Path, number: int) -> Optional[Path]:
+    """Use the verdict bound to the accepted snapshot; legacy folders keep old lookup."""
+    manifest = project / "manuscript" / "chapters" / "history" / f"chapter-{number:02d}" / "manifest.json"
+    if manifest.exists():
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+            if not isinstance(data, dict) or data.get("schema_version") != "book-genesis.chapter-history/v1" or data.get("chapter") != number:
+                return None
+            accepted = data.get("accepted")
+            attempts = data.get("attempts", [])
+            if not isinstance(accepted, dict) or accepted.get("status") != "accepted":
+                return None
+            if not isinstance(attempts, list) or not any(isinstance(item, dict) and all(item.get(key) == accepted.get(key) for key in ("attempt_id", "draft_path", "verdict_path", "sha256")) and item.get("status") == "accepted" for item in attempts):
+                return None
+            relative = accepted.get("verdict_path") if isinstance(accepted, dict) else None
+            draft_relative = accepted.get("draft_path")
+            candidate = (project / relative).resolve() if isinstance(relative, str) else None
+            draft = (project / draft_relative).resolve() if isinstance(draft_relative, str) else None
+            canonical = project / "manuscript" / "chapters" / f"chapter-{number:02d}.md"
+            if candidate and draft and project.resolve() in candidate.parents and project.resolve() in draft.parents and candidate.is_file() and draft.is_file() and canonical.is_file() and accepted.get("sha256") == _hash(draft) == _hash(canonical):
+                return candidate
+            return None
+        except (OSError, ValueError, json.JSONDecodeError):
+            return None
+    return _latest_judge_file(project, number)
+
+
+def _hash(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _last_yaml_block(text: str) -> str:

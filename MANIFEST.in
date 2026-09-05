@@ -1,0 +1,3 @@
+recursive-include agents *.md
+recursive-include knowledge *.md
+recursive-include skills *.md *.yaml

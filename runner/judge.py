@@ -15,8 +15,9 @@ import re
 from typing import Dict, List, Optional, Union
 
 from runner.adapters import Adapter
+from runner.resources import resource_root
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = resource_root()
 JUDGE_TEMPLATE = REPO_ROOT / "agents" / "book-judge.md"
 
 KNOWN_FLAGS = ("hook", "dialogue", "pacing", "ai_pattern", "exposition", "voice", "continuity")

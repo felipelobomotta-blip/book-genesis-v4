@@ -5,12 +5,15 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
 from runner.filesystem import scaffold_project  # type: ignore  # noqa: E402
+from runner import cli  # type: ignore  # noqa: E402
+from runner.setup import SetupOutcome  # type: ignore  # noqa: E402
 
 
 OUTLINE = """# Outline
@@ -49,6 +52,21 @@ def run_cli(*args: str) -> subprocess.CompletedProcess:
 
 
 class CliTests(unittest.TestCase):
+    def test_setup_exit_codes_do_not_mask_failed_or_skipped_configuration(self) -> None:
+        args = cli.build_parser().parse_args(["setup"])
+        with patch("runner.cli.run_setup", return_value=SetupOutcome("failed")):
+            self.assertEqual(cli.EXIT_FAILURE, cli._setup_command(args))
+        with patch("runner.cli.run_setup", return_value=SetupOutcome("skipped")):
+            self.assertEqual(cli.EXIT_OK, cli._setup_command(args))
+
+    def test_cli_new_and_resume_delegate_to_the_guided_entry_point(self) -> None:
+        with patch("runner.app.session_main", return_value=17) as session:
+            self.assertEqual(17, cli.main(["new", "--idea", "x"]))
+            self.assertEqual(17, cli.main(["resume", "project"]))
+        self.assertEqual(
+            [((['new', '--idea', 'x'],), {}), ((['resume', 'project'],), {})],
+            session.call_args_list,
+        )
     def setUp(self) -> None:
         self.tempdir = Path(tempfile.mkdtemp(prefix="book-genesis-cli-"))
         self.project = self.tempdir / "project"
@@ -139,7 +157,7 @@ class CliTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
         self.assertTrue((project / "manuscript" / "chapters" / "chapter-01.md").exists())
         self.assertFalse((project / "manuscript" / "chapters" / "chapter-02.md").exists())
-        self.assertIn("stopped after 1 chapter", result.stdout)
+        self.assertIn("stopped after 1 of 2 chapters", result.stdout)
         self.assertNotIn("chapter 2", result.stdout)
 
     def test_book_command_writes_every_chapter_by_default(self) -> None:
@@ -185,7 +203,7 @@ class CliTests(unittest.TestCase):
             "=== FILE: artifacts/05-outline.md ===\n" + OUTLINE + "\n"
             "=== FILE: artifacts/07-opening-strategy.md ===\n# Opening\n\nOPENING-SENTINEL\n"
         )
-        audit = "=== FILE: artifacts/08-adversarial-audit.md ===\n# Audit\n\nAUDIT-SENTINEL\n"
+        audit = "=== FILE: artifacts/08-adversarial-audit.md ===\n# Audit\n\nAUDIT-SENTINEL\n\naudit_status: pass\n"
         score = "=== FILE: artifacts/09-genesis-score-codex.md ===\n# Diagnostic\n\nSCORE-SENTINEL\n"
         package = "=== FILE: artifacts/10-editorial-package.md ===\n# Package\n\nPACKAGE-SENTINEL\n"
         responses = [
@@ -204,12 +222,13 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(0, result.returncode, msg=result.stdout + result.stderr)
         self.assertTrue((project / "manuscript" / "chapters" / "chapter-02.md").exists())
-        self.assertIn("Phase 0", result.stdout)
-        self.assertIn("chapter 1", result.stdout)
-        self.assertIn("chapter 2", result.stdout)
-        self.assertIn("RUN_REPORT.md", result.stdout)
+        # `new` is now the guided runner.app entry point, whose terminal
+        # presentation names the stages rather than the legacy Phase numbers.
+        self.assertIn("Intake", result.stdout)
+        self.assertIn("Drafting", result.stdout)
+        self.assertIn("report", result.stdout)
         self.assertIn("PACKAGE-SENTINEL", (project / "artifacts" / "10-editorial-package.md").read_text(encoding="utf-8"))
-        self.assertIn("completed", result.stdout)
+        self.assertIn("Package", result.stdout)
 
     def test_book_genesis_console_script_points_at_the_guided_entry_point(self) -> None:
         # ADR 0009: `book-genesis` opens the guided session; runner.cli stays the command layer.

@@ -1,602 +1,217 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Book Genesis — Ten books in thirty days. One pipeline. Any agent.</title>
-<meta name="description" content="Agent-agnostic AI book production pipeline for Claude Code, Codex, Antigravity, Kimi, and any file-aware agent.">
-<meta property="og:title" content="Book Genesis — Ten books in thirty days.">
-<meta property="og:description" content="Agent-agnostic AI book production pipeline. One workflow, any AI agent.">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --ink:        #0A0E27;
-    --ink-2:      #141937;
-    --ink-3:      #1E2547;
-    --parchment:  #F5F0E8;
-    --parchment-2:#EAE2D2;
-    --gold:       #D4A574;
-    --gold-bright:#E8C896;
-    --gold-deep:  #B8884F;
-    --crimson:    #B91C1C;
-    --line:       rgba(212,165,116,0.18);
-    --line-soft:  rgba(212,165,116,0.08);
-    --serif:      'Cormorant Garamond', Garamond, 'Times New Roman', serif;
-    --sans:       'Inter', 'Helvetica Neue', sans-serif;
-    --mono:       'JetBrains Mono', 'Courier New', monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--ink);
-    color: var(--parchment);
-    font-family: var(--sans);
-    font-weight: 300;
-    line-height: 1.7;
-    overflow-x: hidden;
-  }
-  ::selection { background: var(--gold); color: var(--ink); }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <meta name="description" content="Book Genesis is an open-source local writing workflow for authors who want to develop an idea into an inspectable manuscript.">
+  <title>Book Genesis 5 — Imagination Edition</title>
+  <style>
+    :root {
+      --cream: #f6f0e4;
+      --paper: #fffaf0;
+      --forest: #173d31;
+      --forest-deep: #0d2a21;
+      --copper: #b75c36;
+      --copper-light: #e9b18b;
+      --ink: #1f2922;
+      --muted: #5d665e;
+      --line: #d9cdb9;
+      --shadow: 0 18px 44px rgba(18, 48, 38, .12);
+    }
 
-  /* Background grid + glow */
-  body::before {
-    content: ''; position: fixed; inset: 0; z-index: 0;
-    background-image:
-      linear-gradient(rgba(212,165,116,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(212,165,116,0.04) 1px, transparent 1px);
-    background-size: 48px 48px;
-    pointer-events: none;
-  }
-  body::after {
-    content: ''; position: fixed;
-    top: -200px; left: 50%; transform: translateX(-50%);
-    width: 1200px; height: 1200px;
-    background: radial-gradient(circle, rgba(212,165,116,0.10), transparent 60%);
-    pointer-events: none; z-index: 0;
-  }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--cream);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 18px;
+      line-height: 1.62;
+    }
 
-  .container { max-width: 1180px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+    a { color: inherit; }
+    a:focus-visible, summary:focus-visible { outline: 3px solid var(--copper); outline-offset: 4px; border-radius: 2px; }
+    .skip-link { position: absolute; left: 1rem; top: -5rem; z-index: 10; background: var(--paper); padding: .55rem .8rem; font-family: ui-sans-serif, system-ui, sans-serif; }
+    .skip-link:focus { top: 1rem; }
+    .shell { width: min(1120px, calc(100% - 2.5rem)); margin: 0 auto; }
 
-  /* Nav */
-  nav {
-    position: sticky; top: 0; z-index: 10;
-    background: rgba(10,14,39,0.85);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--line);
-  }
-  nav .container { display: flex; align-items: center; justify-content: space-between; padding: 18px 32px; }
-  nav .brand { font-family: var(--serif); font-size: 22px; letter-spacing: 4px; color: var(--parchment); text-decoration: none; }
-  nav .brand span { color: var(--gold); }
-  nav ul { list-style: none; display: flex; gap: 32px; align-items: center; }
-  nav ul a { color: var(--parchment); text-decoration: none; font-size: 13px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.75; transition: opacity 0.2s, color 0.2s; }
-  nav ul a:hover { opacity: 1; color: var(--gold); }
-  .lang-toggle {
-    display: inline-flex; border: 1px solid var(--gold); border-radius: 999px; overflow: hidden; font-size: 11px; letter-spacing: 1.5px;
-  }
-  .lang-toggle button {
-    background: transparent; border: 0; color: var(--gold); padding: 6px 14px; font-family: var(--sans); cursor: pointer; letter-spacing: 1.5px;
-  }
-  .lang-toggle button.active { background: var(--gold); color: var(--ink); }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      padding: 1.3rem 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      font-size: .9rem;
+    }
+    .wordmark { display: inline-flex; align-items: center; gap: .65rem; font-weight: 800; letter-spacing: .04em; text-decoration: none; }
+    .mark { display: grid; place-items: center; width: 1.85rem; height: 1.85rem; color: var(--cream); background: var(--forest); border-radius: 50% 50% 44% 50%; font-family: Georgia, serif; font-size: 1.2rem; }
+    .topbar nav { display: flex; gap: 1.1rem; align-items: center; }
+    .topbar nav a { color: var(--muted); text-decoration: none; }
+    .topbar nav a:hover { color: var(--forest); text-decoration: underline; text-underline-offset: .25rem; }
 
-  /* Hero */
-  .hero { padding: 120px 0 80px; text-align: center; position: relative; }
-  .hero .kicker {
-    font-size: 11px; letter-spacing: 6px; text-transform: uppercase; color: var(--gold);
-    display: inline-flex; align-items: center; gap: 14px; margin-bottom: 28px;
-  }
-  .hero .kicker::before, .hero .kicker::after {
-    content: ''; width: 32px; height: 1px; background: var(--gold);
-  }
-  .hero h1 {
-    font-family: var(--serif); font-weight: 500;
-    font-size: clamp(48px, 7vw, 96px);
-    line-height: 1; letter-spacing: -1px;
-    margin-bottom: 32px;
-  }
-  .hero h1 em {
-    font-style: italic; color: var(--gold);
-  }
-  .hero .lede {
-    font-size: clamp(18px, 1.8vw, 22px); max-width: 720px; margin: 0 auto 48px;
-    color: var(--parchment-2); font-weight: 300;
-  }
-  .hero .ctas { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 16px 32px; border-radius: 4px;
-    font-family: var(--sans); font-size: 13px; letter-spacing: 2px; text-transform: uppercase;
-    text-decoration: none; cursor: pointer; transition: all 0.2s;
-    border: 1px solid var(--gold);
-  }
-  .btn-primary { background: var(--gold); color: var(--ink); font-weight: 600; }
-  .btn-primary:hover { background: var(--gold-bright); transform: translateY(-1px); }
-  .btn-ghost { background: transparent; color: var(--gold); }
-  .btn-ghost:hover { background: rgba(212,165,116,0.1); }
+    .hero { padding: 2.4rem 0 5.3rem; }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, .94fr) minmax(340px, 1.06fr); gap: clamp(2rem, 5vw, 5rem); align-items: center; }
+    .eyebrow, .section-label { margin: 0 0 .9rem; color: var(--copper); font: 800 .75rem/1.2 ui-sans-serif, system-ui, sans-serif; letter-spacing: .16em; text-transform: uppercase; }
+    h1, h2 { color: var(--forest-deep); letter-spacing: -.045em; line-height: 1.01; }
+    h1 { max-width: 12ch; margin: 0; font-size: clamp(3.2rem, 7vw, 6.4rem); }
+    .hero-copy { max-width: 34rem; margin: 1.5rem 0 0; color: var(--muted); font-size: clamp(1.1rem, 1.8vw, 1.32rem); }
+    .hero-copy strong { color: var(--forest); }
+    .actions { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 2rem; font-family: ui-sans-serif, system-ui, sans-serif; font-size: .96rem; font-weight: 700; }
+    .button { display: inline-block; padding: .82rem 1.1rem; border: 1px solid var(--forest); border-radius: .25rem; text-decoration: none; transition: transform .16s ease, background .16s ease; }
+    .button:hover { transform: translateY(-2px); }
+    .button-primary { color: var(--paper); background: var(--forest); }
+    .button-primary:hover { background: var(--forest-deep); }
+    .button-secondary { color: var(--forest); background: transparent; }
+    .button-secondary:hover { background: rgba(23, 61, 49, .07); }
 
-  /* Stats strip */
-  .stats {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
-    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-    margin-top: 80px;
-  }
-  .stat { padding: 32px 24px; text-align: center; border-right: 1px solid var(--line); }
-  .stat:last-child { border-right: 0; }
-  .stat .num { font-family: var(--serif); font-size: 56px; line-height: 1; color: var(--gold); margin-bottom: 8px; }
-  .stat .lbl { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.7; }
+    .hero-art { position: relative; }
+    .hero-art::before { content: ""; position: absolute; inset: -1rem 1rem 1rem -1rem; z-index: -1; border: 1px solid var(--copper-light); transform: rotate(-2deg); }
+    .hero-art img { display: block; width: 100%; height: auto; box-shadow: var(--shadow); }
+    .art-note { margin: .9rem 0 0; color: var(--muted); font: 500 .8rem/1.5 ui-sans-serif, system-ui, sans-serif; }
 
-  /* Section */
-  section.block { padding: 100px 0; position: relative; }
-  .section-head { text-align: center; max-width: 760px; margin: 0 auto 64px; }
-  .section-head .eyebrow {
-    font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: var(--gold); margin-bottom: 16px;
-  }
-  .section-head h2 {
-    font-family: var(--serif); font-weight: 500; font-size: clamp(36px, 4.5vw, 56px);
-    line-height: 1.1; letter-spacing: -0.5px;
-  }
-  .section-head p { margin-top: 16px; opacity: 0.85; font-size: 18px; }
+    .promise { padding: 4.8rem 0; background: var(--forest); color: var(--cream); }
+    .promise h2 { max-width: 16ch; margin: 0; color: var(--cream); font-size: clamp(2.2rem, 4vw, 4rem); }
+    .promise p { max-width: 41rem; margin: 1.25rem 0 0; color: #d8e0d6; }
 
-  /* Pipeline */
-  .pipeline { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; }
-  .phase {
-    padding: 24px 16px; text-align: center;
-    border: 1px solid var(--line); border-right: 0; position: relative;
-    background: rgba(20,25,55,0.4);
-  }
-  .phase:last-child { border-right: 1px solid var(--line); }
-  .phase .num {
-    font-family: var(--serif); font-size: 36px; color: var(--gold); line-height: 1; margin-bottom: 8px;
-  }
-  .phase .name { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; color: var(--parchment); }
-  .phase .desc { font-size: 12px; opacity: 0.7; line-height: 1.5; }
-  .phase::after {
-    content: '▸'; position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
-    color: var(--gold); font-size: 14px; background: var(--ink); padding: 2px 4px; z-index: 2;
-  }
-  .phase:last-child::after { display: none; }
+    .flow { padding: 5.8rem 0; }
+    .section-intro { display: grid; grid-template-columns: minmax(0, .7fr) minmax(270px, .6fr); gap: 2rem; align-items: end; margin-bottom: 2.3rem; }
+    h2 { margin: 0; font-size: clamp(2.1rem, 4.5vw, 4.2rem); }
+    .section-intro p { margin: 0; color: var(--muted); }
+    .flow-list { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; margin: 0; padding: 0; list-style: none; border: 1px solid var(--line); background: var(--paper); }
+    .flow-list li { min-height: 10.8rem; padding: 1.25rem; border-right: 1px solid var(--line); }
+    .flow-list li:last-child { border-right: 0; }
+    .flow-list span { display: block; margin-bottom: 1.4rem; color: var(--copper); font: 800 .73rem/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: .12em; }
+    .flow-list strong { display: block; color: var(--forest); font-size: 1.16rem; line-height: 1.15; }
+    .flow-list p { margin: .65rem 0 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
 
-  /* Reasons (table) */
-  .reasons {
-    display: grid; grid-template-columns: 1fr 60px 1fr;
-    gap: 0; max-width: 1000px; margin: 0 auto;
-    border: 1px solid var(--line);
-  }
-  .reasons .col-h {
-    padding: 20px 24px; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold);
-    border-bottom: 1px solid var(--line);
-  }
-  .reasons .arrow-h { background: rgba(212,165,116,0.05); border-bottom: 1px solid var(--line); }
-  .reasons .left { padding: 18px 24px; opacity: 0.55; border-bottom: 1px solid var(--line-soft); }
-  .reasons .right { padding: 18px 24px; border-bottom: 1px solid var(--line-soft); }
-  .reasons .arrow { display: flex; align-items: center; justify-content: center; color: var(--gold); border-bottom: 1px solid var(--line-soft); background: rgba(212,165,116,0.03); }
-  .reasons > div:nth-last-child(-n+3) { border-bottom: 0; }
+    .quickstart { padding: 5.5rem 0; border-top: 1px solid var(--line); }
+    .quickstart-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(340px, 1fr); gap: clamp(2rem, 7vw, 7rem); align-items: center; }
+    .quickstart p { color: var(--muted); }
+    pre { overflow-x: auto; margin: 0; padding: 1.45rem; color: #eff2e9; background: var(--forest-deep); border-top: 4px solid var(--copper); font: .84rem/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; box-shadow: var(--shadow); }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .text-link { color: var(--forest); font-family: ui-sans-serif, system-ui, sans-serif; font-size: .94rem; font-weight: 750; text-underline-offset: .28rem; }
 
-  /* Score wheel */
-  .score-grid {
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px;
-    max-width: 900px; margin: 0 auto;
-    background: var(--line);
-    border: 1px solid var(--line);
-  }
-  .dim {
-    background: var(--ink-2); padding: 28px 16px; text-align: center;
-  }
-  .dim .label { font-family: var(--serif); font-size: 22px; color: var(--gold); margin-bottom: 6px; }
-  .dim .sub { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.6; }
-  .floor-note {
-    max-width: 760px; margin: 48px auto 0; padding: 28px 32px;
-    border-left: 3px solid var(--gold); background: rgba(212,165,116,0.06);
-    font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--parchment);
-  }
-  .floor-note strong { color: var(--gold); font-weight: 600; }
+    .beta { padding: 2rem 0 4.6rem; }
+    .beta-inner { max-width: 48rem; padding: 1.3rem 1.5rem; border-left: 3px solid var(--copper); color: var(--muted); background: rgba(255, 250, 240, .65); }
+    .beta-inner p { margin: 0; }
+    .beta-inner strong { color: var(--forest); }
 
-  /* Agents table */
-  .agents-table { width: 100%; border-collapse: collapse; max-width: 1000px; margin: 0 auto; }
-  .agents-table th, .agents-table td {
-    padding: 18px 20px; text-align: left; border-bottom: 1px solid var(--line-soft);
-    font-size: 14px;
-  }
-  .agents-table th {
-    font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold);
-    border-bottom: 1px solid var(--line);
-  }
-  .agents-table td:first-child { font-family: var(--serif); font-size: 18px; color: var(--parchment); }
-  .agents-table td code { font-family: var(--mono); font-size: 12px; color: var(--gold-bright); background: rgba(212,165,116,0.08); padding: 2px 6px; border-radius: 3px; }
+    footer { padding: 2rem 0 2.7rem; color: #cfd9cf; background: var(--forest-deep); font-family: ui-sans-serif, system-ui, sans-serif; font-size: .84rem; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+    footer p { margin: 0; }
+    footer a { color: var(--cream); text-underline-offset: .25rem; }
 
-  /* Cases */
-  .cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
-  .case {
-    border: 1px solid var(--line); padding: 24px;
-    background: rgba(20,25,55,0.4);
-    transition: border-color 0.2s, transform 0.2s;
-  }
-  .case:hover { border-color: var(--gold); transform: translateY(-2px); }
-  .case .genre {
-    font-size: 11px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--gold); margin-bottom: 12px;
-  }
-  .case h4 { font-family: var(--serif); font-size: 24px; font-weight: 500; margin-bottom: 12px; }
-  .case p { font-size: 14px; opacity: 0.75; line-height: 1.6; }
+    @media (max-width: 820px) {
+      .hero-grid, .quickstart-grid, .section-intro { grid-template-columns: 1fr; }
+      .hero { padding-bottom: 3.5rem; }
+      .hero-art { max-width: 42rem; }
+      .flow-list { grid-template-columns: repeat(3, 1fr); }
+      .flow-list li:nth-child(3) { border-right: 0; }
+      .flow-list li:nth-child(-n + 3) { border-bottom: 1px solid var(--line); }
+    }
 
-  /* Code block */
-  .code-block {
-    background: var(--ink-2); border: 1px solid var(--line); border-radius: 4px;
-    font-family: var(--mono); font-size: 13px; padding: 24px 28px;
-    color: var(--parchment); line-height: 1.7; overflow-x: auto;
-    max-width: 800px; margin: 0 auto;
-  }
-  .code-block .comment { color: var(--gold); opacity: 0.75; }
-  .code-block .cmd { color: var(--gold-bright); }
+    @media (max-width: 540px) {
+      body { font-size: 17px; }
+      .shell { width: min(100% - 1.5rem, 1120px); }
+      .topbar nav a:not(:last-child) { display: none; }
+      .flow-list { grid-template-columns: repeat(2, 1fr); }
+      .flow-list li { min-height: 9.2rem; border-bottom: 1px solid var(--line); }
+      .flow-list li:nth-child(3) { border-right: 1px solid var(--line); }
+      .flow-list li:nth-child(even) { border-right: 0; }
+      .flow-list li:nth-last-child(-n + 2) { border-bottom: 0; }
+      .footer-inner { display: block; }
+      footer p + p { margin-top: .55rem; }
+    }
 
-  /* CTA */
-  .final-cta { text-align: center; padding: 100px 0; border-top: 1px solid var(--line); }
-  .final-cta .quote {
-    font-family: var(--serif); font-style: italic; font-size: clamp(28px, 3vw, 40px);
-    max-width: 760px; margin: 0 auto 40px; line-height: 1.3;
-  }
-  .final-cta .quote em { color: var(--gold); }
-
-  /* Footer */
-  footer { padding: 40px 0; border-top: 1px solid var(--line); text-align: center; font-size: 13px; opacity: 0.55; }
-  footer a { color: var(--gold); text-decoration: none; }
-
-  /* Lang switch */
-  [data-lang-pt], [data-lang-en] { display: none; }
-  body[data-lang="en"] [data-lang-en] { display: revert; }
-  body[data-lang="pt"] [data-lang-pt] { display: revert; }
-  body[data-lang="en"] .ctas [data-lang-en],
-  body[data-lang="pt"] .ctas [data-lang-pt] { display: inline-flex; }
-
-  @media (max-width: 900px) {
-    nav ul { gap: 18px; }
-    nav ul li:not(:last-child) { display: none; }
-    .stats { grid-template-columns: repeat(2, 1fr); }
-    .stat:nth-child(2) { border-right: 0; }
-    .stat:nth-child(1), .stat:nth-child(2) { border-bottom: 1px solid var(--line); }
-    .pipeline { grid-template-columns: repeat(2, 1fr); }
-    .phase { border-right: 1px solid var(--line); }
-    .phase::after { display: none; }
-    .reasons { grid-template-columns: 1fr; }
-    .reasons .arrow, .reasons .arrow-h { display: none; }
-    .reasons .left { opacity: 0.7; }
-    .score-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-</style>
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .button { transition: none; } }
+  </style>
 </head>
-<body data-lang="en">
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="shell topbar">
+    <a class="wordmark" href="#top" aria-label="Book Genesis home"><span class="mark" aria-hidden="true">B</span> BOOK GENESIS</a>
+    <nav aria-label="Primary navigation">
+      <a href="#how-it-works">How it works</a>
+      <a href="#get-started">Get started</a>
+      <a href="https://github.com/felipelobomotta-blip/book-genesis-v4">GitHub</a>
+    </nav>
+  </header>
 
-<nav>
-  <div class="container">
-    <a class="brand" href="#top">BOOK <span>GENESIS</span></a>
-    <ul>
-      <li><a href="#pipeline" data-lang-en>Pipeline</a><a href="#pipeline" data-lang-pt>Pipeline</a></li>
-      <li><a href="#score" data-lang-en>Score</a><a href="#score" data-lang-pt>Score</a></li>
-      <li><a href="#agents" data-lang-en>Agents</a><a href="#agents" data-lang-pt>Agentes</a></li>
-      <li><a href="#cases" data-lang-en>Cases</a><a href="#cases" data-lang-pt>Casos</a></li>
-      <li>
-        <div class="lang-toggle">
-          <button data-set-lang="en" class="active">EN</button>
-          <button data-set-lang="pt">PT</button>
+  <main id="main">
+    <section id="top" class="hero shell" aria-labelledby="hero-title">
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow">Book Genesis 5 — Imagination Edition</p>
+          <h1 id="hero-title">Creativity comes first.</h1>
+          <p class="hero-copy"><strong>Your story. Your choices.</strong> Book Genesis is a local-first writing workflow for shaping an idea into a manuscript you can inspect, revise, and carry forward.</p>
+          <div class="actions">
+            <a class="button button-primary" href="https://github.com/felipelobomotta-blip/book-genesis-v4">Explore on GitHub</a>
+            <a class="button button-secondary" href="../examples/reader-demo/index.html">Open the reader sample</a>
+          </div>
         </div>
-      </li>
-    </ul>
-  </div>
-</nav>
-
-<header id="top" class="hero">
-  <div class="container">
-    <div class="kicker" data-lang-en>AGENT-AGNOSTIC · FILE-NATIVE · BOOK-FIRST</div>
-    <div class="kicker" data-lang-pt>AGENT-AGNÓSTICO · FILE-NATIVE · BOOK-FIRST</div>
-
-    <h1 data-lang-en>Ten books.<br>Thirty days.<br><em>One pipeline.</em></h1>
-    <h1 data-lang-pt>Dez livros.<br>Trinta dias.<br><em>Um pipeline.</em></h1>
-
-    <p class="lede" data-lang-en>An agent-agnostic AI book production pipeline. Take a one-line idea through research, drafting, adversarial audit, scoring, and an editorial package — on Claude Code, Codex, Antigravity, Kimi, or any file-aware agent.</p>
-    <p class="lede" data-lang-pt>Um pipeline de produção de livros com IA, agnóstico de agente. Leve uma ideia de uma linha por pesquisa, escrita, auditoria adversarial, pontuação e empacotamento editorial — no Claude Code, Codex, Antigravity, Kimi ou qualquer agente que enxergue arquivos.</p>
-
-    <div class="ctas">
-      <a class="btn btn-primary" href="https://github.com/felipelobomotta-blip/book-genesis-v4" target="_blank" rel="noopener">
-        <span data-lang-en>Open on GitHub →</span>
-        <span data-lang-pt>Abrir no GitHub →</span>
-      </a>
-      <a class="btn btn-ghost" href="#pipeline">
-        <span data-lang-en>How it works</span>
-        <span data-lang-pt>Como funciona</span>
-      </a>
-    </div>
-
-    <div class="stats">
-      <div class="stat"><div class="num">10+</div><div class="lbl" data-lang-en>Books · 30 days</div><div class="lbl" data-lang-pt>Livros · 30 dias</div></div>
-      <div class="stat"><div class="num">7</div><div class="lbl" data-lang-en>Pipeline phases</div><div class="lbl" data-lang-pt>Fases do pipeline</div></div>
-      <div class="stat"><div class="num">10</div><div class="lbl" data-lang-en>Score dimensions</div><div class="lbl" data-lang-pt>Dimensões de score</div></div>
-      <div class="stat"><div class="num">∞</div><div class="lbl" data-lang-en>Agents supported</div><div class="lbl" data-lang-pt>Agentes suportados</div></div>
-    </div>
-  </div>
-</header>
-
-<section class="block" id="pipeline">
-  <div class="container">
-    <div class="section-head">
-      <div class="eyebrow" data-lang-en>The pipeline</div>
-      <div class="eyebrow" data-lang-pt>O pipeline</div>
-      <h2 data-lang-en>Seven phases. One ritual. Repeatable.</h2>
-      <h2 data-lang-pt>Sete fases. Um ritual. Reproduzível.</h2>
-      <p data-lang-en>One active phase prompt at a time. State persisted to files. Draft before judgment. Adversarial audit before score.</p>
-      <p data-lang-pt>Um prompt de fase ativo por vez. Estado em arquivo. Escreva antes de julgar. Auditoria adversarial antes da nota.</p>
-    </div>
-
-    <div class="pipeline">
-      <div class="phase"><div class="num">0</div><div class="name" data-lang-en>Intake</div><div class="name" data-lang-pt>Intake</div><div class="desc" data-lang-en>brief, market map, story engine</div><div class="desc" data-lang-pt>briefing, mapa de mercado, motor da história</div></div>
-      <div class="phase"><div class="num">1</div><div class="name" data-lang-en>Foundation</div><div class="name" data-lang-pt>Alicerce</div><div class="desc" data-lang-en>characters, theme, emotional curve</div><div class="desc" data-lang-pt>personagens, tema, curva emocional</div></div>
-      <div class="phase"><div class="num">2</div><div class="name" data-lang-en>Architecture</div><div class="name" data-lang-pt>Arquitetura</div><div class="desc" data-lang-en>outline, tension map, opening</div><div class="desc" data-lang-pt>outline, mapa de tensão, abertura</div></div>
-      <div class="phase"><div class="num">3</div><div class="name" data-lang-en>Drafting</div><div class="name" data-lang-pt>Escrita</div><div class="desc" data-lang-en>chapter files, durable</div><div class="desc" data-lang-pt>capítulos em arquivo, durável</div></div>
-      <div class="phase"><div class="num">4</div><div class="name" data-lang-en>Audit</div><div class="name" data-lang-pt>Auditoria</div><div class="desc" data-lang-en>adversarial structural review</div><div class="desc" data-lang-pt>revisão estrutural adversarial</div></div>
-      <div class="phase"><div class="num">5</div><div class="name" data-lang-en>Score</div><div class="name" data-lang-pt>Score</div><div class="desc" data-lang-en>Genesis Score report</div><div class="desc" data-lang-pt>relatório Genesis Score</div></div>
-      <div class="phase"><div class="num">6</div><div class="name" data-lang-en>Editorial</div><div class="name" data-lang-pt>Editorial</div><div class="desc" data-lang-en>logline, blurb, synopsis, cover brief</div><div class="desc" data-lang-pt>logline, blurb, sinopse, brief de capa</div></div>
-    </div>
-  </div>
-</section>
-
-<section class="block" id="why" style="background: rgba(212,165,116,0.02);">
-  <div class="container">
-    <div class="section-head">
-      <div class="eyebrow" data-lang-en>Why this version</div>
-      <div class="eyebrow" data-lang-pt>Por que esta versão</div>
-      <h2 data-lang-en>Less pressure. More book.</h2>
-      <h2 data-lang-pt>Menos pressão. Mais livro.</h2>
-      <p data-lang-en>The old V4/V5 system caught problems but pushed the writer to optimize for the evaluator. The universal core keeps the durable parts and removes the pressure points.</p>
-      <p data-lang-pt>O sistema antigo V4/V5 pegava problemas, mas empurrava o escritor a escrever pro avaliador. O core universal mantém o que é durável e remove os pontos de pressão.</p>
-    </div>
-
-    <div class="reasons">
-      <div class="col-h" data-lang-en>Old V4/V5</div>
-      <div class="col-h" data-lang-pt>V4/V5 antigo</div>
-      <div class="col-h arrow-h"></div>
-      <div class="col-h" data-lang-en>Universal Core</div>
-      <div class="col-h" data-lang-pt>Core Universal</div>
-
-      <div class="left" data-lang-en>Many live constraints during drafting</div>
-      <div class="left" data-lang-pt>Muitas restrições simultâneas durante o draft</div>
-      <div class="arrow">→</div>
-      <div class="right" data-lang-en>One active phase prompt at a time</div>
-      <div class="right" data-lang-pt>Um prompt de fase ativo por vez</div>
-
-      <div class="left" data-lang-en>Implicit assumptions</div>
-      <div class="left" data-lang-pt>Premissas implícitas</div>
-      <div class="arrow">→</div>
-      <div class="right" data-lang-en>Explicit ASSUMPTIONS.md</div>
-      <div class="right" data-lang-pt>ASSUMPTIONS.md explícito</div>
-
-      <div class="left" data-lang-en>In-memory state</div>
-      <div class="left" data-lang-pt>Estado em memória</div>
-      <div class="arrow">→</div>
-      <div class="right" data-lang-en>File-backed durable project state</div>
-      <div class="right" data-lang-pt>Estado durável persistido em arquivo</div>
-
-      <div class="left" data-lang-en>Score-while-drafting</div>
-      <div class="left" data-lang-pt>Pontua enquanto escreve</div>
-      <div class="arrow">→</div>
-      <div class="right" data-lang-en>Draft first, judge later</div>
-      <div class="right" data-lang-pt>Escreva primeiro, julgue depois</div>
-
-      <div class="left" data-lang-en>Score before audit</div>
-      <div class="left" data-lang-pt>Pontua antes da auditoria</div>
-      <div class="arrow">→</div>
-      <div class="right" data-lang-en>Adversarial audit before final score</div>
-      <div class="right" data-lang-pt>Auditoria adversarial antes da nota final</div>
-
-      <div class="left" data-lang-en>Free-form scores</div>
-      <div class="left" data-lang-pt>Notas livres</div>
-      <div class="arrow">→</div>
-      <div class="right" data-lang-en>Evidence required for every score</div>
-      <div class="right" data-lang-pt>Evidência exigida para toda nota</div>
-
-      <div class="left" data-lang-en>Single-tool dependency</div>
-      <div class="left" data-lang-pt>Dependência de uma só ferramenta</div>
-      <div class="arrow">→</div>
-      <div class="right" data-lang-en>Portable across any file-aware agent</div>
-      <div class="right" data-lang-pt>Portátil pra qualquer agente que lê arquivo</div>
-    </div>
-  </div>
-</section>
-
-<section class="block" id="score">
-  <div class="container">
-    <div class="section-head">
-      <div class="eyebrow" data-lang-en>The Genesis Score</div>
-      <div class="eyebrow" data-lang-pt>O Genesis Score</div>
-      <h2 data-lang-en>Ten dimensions. One floor.</h2>
-      <h2 data-lang-pt>Dez dimensões. Um chão.</h2>
-      <p data-lang-en>Approval requires a strong weighted average, no weak floor dimension, cited evidence, and a passed adversarial audit.</p>
-      <p data-lang-pt>A aprovação exige média ponderada forte, nenhuma dimensão de chão fraca, evidência citada e auditoria adversarial aprovada.</p>
-    </div>
-
-    <div class="score-grid">
-      <div class="dim"><div class="label" data-lang-en>Originality</div><div class="label" data-lang-pt>Originalidade</div><div class="sub">01</div></div>
-      <div class="dim"><div class="label" data-lang-en>Theme</div><div class="label" data-lang-pt>Tema</div><div class="sub">02</div></div>
-      <div class="dim"><div class="label" data-lang-en>Characters</div><div class="label" data-lang-pt>Personagens</div><div class="sub">03</div></div>
-      <div class="dim"><div class="label" data-lang-en>Prose</div><div class="label" data-lang-pt>Prosa</div><div class="sub">04</div></div>
-      <div class="dim"><div class="label" data-lang-en>Pacing</div><div class="label" data-lang-pt>Ritmo</div><div class="sub">05</div></div>
-      <div class="dim"><div class="label" data-lang-en>Emotion</div><div class="label" data-lang-pt>Emoção</div><div class="sub">06</div></div>
-      <div class="dim"><div class="label" data-lang-en>Coherence</div><div class="label" data-lang-pt>Coerência</div><div class="sub">07</div></div>
-      <div class="dim"><div class="label" data-lang-en>Market</div><div class="label" data-lang-pt>Mercado</div><div class="sub">08</div></div>
-      <div class="dim"><div class="label" data-lang-en>Voice</div><div class="label" data-lang-pt>Voz</div><div class="sub">09</div></div>
-      <div class="dim"><div class="label" data-lang-en>Opening</div><div class="label" data-lang-pt>Abertura</div><div class="sub">10</div></div>
-    </div>
-
-    <div class="floor-note" data-lang-en>
-      <strong>The floor principle.</strong> A book is only as strong as its weakest major dimension. Brilliant prose does not save a broken opening. A killer hook does not save dead pacing.
-    </div>
-    <div class="floor-note" data-lang-pt>
-      <strong>O princípio do chão.</strong> Um livro só é tão forte quanto sua dimensão mais fraca. Prosa brilhante não salva uma abertura morta. Um gancho matador não salva ritmo arrastado.
-    </div>
-  </div>
-</section>
-
-<section class="block" id="agents" style="background: rgba(212,165,116,0.02);">
-  <div class="container">
-    <div class="section-head">
-      <div class="eyebrow" data-lang-en>Use it with any agent</div>
-      <div class="eyebrow" data-lang-pt>Use com qualquer agente</div>
-      <h2 data-lang-en>Bring your own AI.</h2>
-      <h2 data-lang-pt>Traga sua IA.</h2>
-      <p data-lang-en>The product is not a binary or a single prompt — it is a reproducible folder of markdown, manifests, and contracts. Every file-aware agent can run it.</p>
-      <p data-lang-pt>O produto não é um binário nem um prompt único — é uma pasta reproduzível de markdown, manifestos e contratos. Todo agente que enxerga arquivo consegue rodar.</p>
-    </div>
-
-    <table class="agents-table">
-      <thead>
-        <tr>
-          <th data-lang-en>Tool</th><th data-lang-pt>Ferramenta</th>
-          <th data-lang-en>How to run it</th><th data-lang-pt>Como rodar</th>
-          <th data-lang-en>Status</th><th data-lang-pt>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Claude Code</td>
-          <td><span data-lang-en>Install the skill folder, then </span><span data-lang-pt>Instale a pasta de skill, depois </span><code>/book-genesis-codex</code></td>
-          <td><span data-lang-en>Native multi-file skill</span><span data-lang-pt>Skill multi-arquivo nativa</span></td>
-        </tr>
-        <tr>
-          <td>Codex</td>
-          <td><span data-lang-en>Point Codex at </span><span data-lang-pt>Aponte o Codex pra </span><code>AGENTS.md</code></td>
-          <td><span data-lang-en>Native repo workflow</span><span data-lang-pt>Workflow de repo nativo</span></td>
-        </tr>
-        <tr>
-          <td>Antigravity</td>
-          <td><span data-lang-en>Open the repo, follow </span><span data-lang-pt>Abra o repo, siga </span><code>AGENTS.md</code></td>
-          <td><span data-lang-en>Agent playbook</span><span data-lang-pt>Playbook de agente</span></td>
-        </tr>
-        <tr>
-          <td>Kimi</td>
-          <td><span data-lang-en>Upload the skill folder or paste </span><span data-lang-pt>Faça upload da pasta de skill ou cole </span><code>AGENTS.md</code></td>
-          <td><span data-lang-en>File-backed workflow</span><span data-lang-pt>Workflow apoiado em arquivo</span></td>
-        </tr>
-        <tr>
-          <td><span data-lang-en>Other agents</span><span data-lang-pt>Outros agentes</span></td>
-          <td><span data-lang-en>Provide the </span><span data-lang-pt>Forneça a </span><code>skills/book-genesis-codex/</code><span data-lang-en> folder</span><span data-lang-pt> pasta</span></td>
-          <td><span data-lang-en>Portable markdown system</span><span data-lang-pt>Sistema markdown portátil</span></td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div style="margin-top: 56px;">
-      <pre class="code-block"><span class="comment" data-lang-en># Claude Code example</span><span class="comment" data-lang-pt># Exemplo Claude Code</span>
-<span class="cmd">/book-genesis-codex</span> pt-br "thriller sobre um ex-policial que descobre
-                       que sua vingança é parte do sistema que ele odeia"</pre>
-    </div>
-  </div>
-</section>
-
-<section class="block" id="cases">
-  <div class="container">
-    <div class="section-head">
-      <div class="eyebrow" data-lang-en>Proof gallery</div>
-      <div class="eyebrow" data-lang-pt>Galeria de prova</div>
-      <h2 data-lang-en>Books, not benchmarks.</h2>
-      <h2 data-lang-pt>Livros, não benchmarks.</h2>
-      <p data-lang-en>Ten projects through the system in under thirty days. Manuscripts stay private. The repo ships pipeline, covers, public artifacts, and case studies.</p>
-      <p data-lang-pt>Dez projetos pelo sistema em menos de trinta dias. Os manuscritos ficam privados. O repo entrega pipeline, capas, artefatos públicos e estudos de caso.</p>
-    </div>
-
-    <div class="cases">
-      <div class="case">
-        <div class="genre" data-lang-en>Memoir / generational essay</div>
-        <div class="genre" data-lang-pt>Memória / ensaio geracional</div>
-        <h4>Protocolo Não Encontrado</h4>
-        <p data-lang-en>Early simpler pipeline; strong external response. Documented artifact set.</p>
-        <p data-lang-pt>Pipeline mais simples no início; resposta externa forte. Conjunto de artefatos documentado.</p>
+        <figure class="hero-art">
+          <img src="../marketing/assets/launch-landscape-en.png" alt="An editorial landscape for Book Genesis, centered on imagination and authorship.">
+          <figcaption class="art-note">A workflow for the work around the pages: direction, revision, and a record you can read.</figcaption>
+        </figure>
       </div>
-      <div class="case">
-        <div class="genre" data-lang-en>Hermetic fantasy</div>
-        <div class="genre" data-lang-pt>Fantasia hermética</div>
-        <h4>Age of Aquarius</h4>
-        <p data-lang-en>High internal Genesis Score after iterative evaluation.</p>
-        <p data-lang-pt>Genesis Score interno alto após avaliação iterativa.</p>
+    </section>
+
+    <section class="promise">
+      <div class="shell">
+        <p class="section-label">The author stays present</p>
+        <h2>Keep the spark. Give the process somewhere to go.</h2>
+        <p>Book Genesis helps turn a premise into a visible trail of decisions: foundation, outline, draft attempts, model feedback, editorial audit, and local exports. You can redirect the work at key moments, pause safely, and return to the same project later.</p>
       </div>
-      <div class="case">
-        <div class="genre" data-lang-en>Vigilante thriller</div>
-        <div class="genre" data-lang-pt>Thriller justiceiro</div>
-        <h4>Protocolo Vermelho</h4>
-        <p data-lang-en>V4→V5 calibration revealed score inflation and pacing limits.</p>
-        <p data-lang-pt>Calibração V4→V5 revelou inflação de nota e limites de ritmo.</p>
+    </section>
+
+    <section id="how-it-works" class="flow shell" aria-labelledby="flow-title">
+      <div class="section-intro">
+        <div>
+          <p class="section-label">A deliberate flow</p>
+          <h2 id="flow-title">One idea, six clear movements.</h2>
+        </div>
+        <p>The runner saves the work locally. Model providers you choose supply text and feedback; the project remains yours to examine and revise.</p>
       </div>
-      <div class="case">
-        <div class="genre" data-lang-en>Literary sci-fi thriller</div>
-        <div class="genre" data-lang-pt>Sci-fi literário</div>
-        <h4>The Source Code</h4>
-        <p data-lang-en>Long revision loops revealed diminishing returns. v2 proved audit-first scoring is safer.</p>
-        <p data-lang-pt>Loops longos de revisão revelaram retornos decrescentes. v2 provou que auditoria primeiro é mais seguro.</p>
+      <ol class="flow-list">
+        <li><span>01</span><strong>Foundation</strong><p>Clarify the premise, stakes, audience, and story engine.</p></li>
+        <li><span>02</span><strong>Outline</strong><p>See the shape of the work before drafting the pages.</p></li>
+        <li><span>03</span><strong>Draft</strong><p>Build chapters with retained attempts instead of a disposable one-shot.</p></li>
+        <li><span>04</span><strong>Model read</strong><p>Use blind model-reader feedback to identify where attention holds or breaks.</p></li>
+        <li><span>05</span><strong>Audit</strong><p>Read the manuscript as a whole; revision requests stop the process for you to address.</p></li>
+        <li><span>06</span><strong>Export</strong><p>Review locally, compare versions, and export canonical chapters to Markdown or EPUB.</p></li>
+      </ol>
+    </section>
+
+    <section id="get-started" class="quickstart">
+      <div class="shell quickstart-grid">
+        <div>
+          <p class="section-label">Get started</p>
+          <h2>Start with the sentence you cannot stop thinking about.</h2>
+          <p>Bring your own model route: an existing CLI session, a configured provider, a local server, another command-line adapter, or manual copy and paste. The runner guides the rest and keeps the project files on your machine.</p>
+          <a class="text-link" href="../docs/quickstart.md">Read the full quickstart guide</a>
+        </div>
+        <pre aria-label="Quick start commands"><code>git clone https://github.com/felipelobomotta-blip/book-genesis-v4.git
+cd book-genesis-v4
+python -m pip install -e .
+
+book-genesis setup
+book-genesis new --idea "Your premise" --language en</code></pre>
       </div>
-      <div class="case">
-        <div class="genre" data-lang-en>Apocalyptic literary thriller</div>
-        <div class="genre" data-lang-pt>Thriller literário apocalíptico</div>
-        <h4>The Trumpet Protocol</h4>
-        <p data-lang-en>Custom theological-prophetic coherence dimension.</p>
-        <p data-lang-pt>Dimensão customizada de coerência teológico-profética.</p>
-      </div>
-      <div class="case">
-        <div class="genre" data-lang-en>Dark academia thriller</div>
-        <div class="genre" data-lang-pt>Dark academia / thriller</div>
-        <h4>The Seventh Manuscript</h4>
-        <p data-lang-en>Foundation for unreliable narration and meta-genre risk.</p>
-        <p data-lang-pt>Base pra narrador não-confiável e risco meta-gênero.</p>
-      </div>
-      <div class="case">
-        <div class="genre" data-lang-en>LitRPG / dungeon core</div>
-        <div class="genre" data-lang-pt>LitRPG / dungeon core</div>
-        <h4>Iron Core</h4>
-        <p data-lang-en>Genre-specific SRE-methodology constraint.</p>
-        <p data-lang-pt>Restrição metodológica SRE específica de gênero.</p>
-      </div>
-      <div class="case">
-        <div class="genre" data-lang-en>Cozy mystery</div>
-        <div class="genre" data-lang-pt>Cozy mystery</div>
-        <h4>The Saltwater Loaf</h4>
-        <p data-lang-en>Fair-play clue system and cozy-market constraints.</p>
-        <p data-lang-pt>Sistema de pistas fair-play e restrições do mercado cozy.</p>
-      </div>
-      <div class="case">
-        <div class="genre" data-lang-en>Apocalyptic sci-fi/fantasy</div>
-        <div class="genre" data-lang-pt>Sci-fi/fantasia apocalíptica</div>
-        <h4>Agenda 2030</h4>
-        <p data-lang-en>Large-scale RAG / foundation calibration.</p>
-        <p data-lang-pt>Calibração de fundação RAG em escala.</p>
-      </div>
+    </section>
+
+    <section class="beta shell" aria-label="Beta status">
+      <div class="beta-inner"><p><strong>Controlled beta.</strong> Book Genesis can structure a writing process and surface model feedback; it does not guarantee a bestseller, publication readiness, or a human reader response. The next proof comes from writers, editors, and readers using it on real work.</p></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell footer-inner">
+      <p>Book Genesis is open source under the MIT License.</p>
+      <p>An Astra-assisted engineering update, with recorded software verification. Astra is not a runtime requirement or an official product endorsement.</p>
     </div>
-  </div>
-</section>
-
-<section class="final-cta">
-  <div class="container">
-    <p class="quote" data-lang-en>Built for writers who want to <em>run the loop,</em><br>not babysit it.</p>
-    <p class="quote" data-lang-pt>Feito pra escritores que querem <em>rodar o loop,</em><br>não vigiar ele.</p>
-    <div class="ctas" style="justify-content: center;">
-      <a class="btn btn-primary" href="https://github.com/felipelobomotta-blip/book-genesis-v4" target="_blank" rel="noopener">
-        <span data-lang-en>Star on GitHub</span>
-        <span data-lang-pt>Estrelar no GitHub</span>
-      </a>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <div class="container">
-    <span data-lang-en>MIT licensed · </span>
-    <span data-lang-pt>Licença MIT · </span>
-    <a href="https://github.com/felipelobomotta-blip/book-genesis-v4" target="_blank" rel="noopener">github.com/felipelobomotta-blip/book-genesis-v4</a>
-  </div>
-</footer>
-
-<script>
-  document.querySelectorAll('[data-set-lang]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const lang = btn.dataset.setLang;
-      document.body.dataset.lang = lang;
-      document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en';
-      document.querySelectorAll('[data-set-lang]').forEach(b => b.classList.toggle('active', b.dataset.setLang === lang));
-    });
-  });
-</script>
-
+  </footer>
 </body>
 </html>

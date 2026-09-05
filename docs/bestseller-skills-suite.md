@@ -1,3 +1,5 @@
+> **Historical material.** This page describes earlier experiments or proposals. Its scores, benchmarks, features and demos are not claims about Imagination Edition. Use the [current README](../README.md) and [validation record](../docs/validation.md) for the beta.
+
 # Book Genesis Bestseller Skills Suite
 
 Book Genesis now ships a market-facing skills suite for writers and repo-aware AI agents that need more than drafting.

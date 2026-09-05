@@ -3,11 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 import json
+import re
 from pathlib import Path
 from typing import Dict, List
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from runner.resources import resource_root
+
+REPO_ROOT = resource_root()
 SKILL_ROOT = REPO_ROOT / "skills" / "book-genesis-codex"
 MANIFEST_PATH = SKILL_ROOT / "references" / "pipeline" / "manifest.yaml"
 
@@ -308,7 +311,7 @@ def prepare_agent_packet(target: Path, agent_key: str) -> Path:
         "## Gates\n\n"
         f"{gate_lines}\n\n"
         "## Operating Rule\n\n"
-        "Produce durable files only. Do not claim market-ready, viral-ready, or 8.5+ readiness unless every listed gate passes with evidence. "
+        "Produce durable files only. Passing internal gates is not evidence of market success, virality, or a calibrated literary score. "
         "When a gate fails, write blockers and revision tickets instead of inflating scores.\n\n"
         "## Skill Prompt\n\n"
         f"{skill_excerpt}\n"
@@ -324,6 +327,20 @@ def advance_phase(target: Path) -> Dict[str, object]:
     pending = pending_outputs(target, phase.outputs)
     if pending:
         return {"ok": False, "pending": pending, "next_phase": phase.label}
+
+    if phase.label == "Phase 4: Adversarial Audit":
+        from runner.audit import audit_status
+        try:
+            status = audit_status((target / "artifacts" / "08-adversarial-audit.md").read_text(encoding="utf-8"))
+        except ValueError as exc:
+            return {"ok": False, "pending": [str(exc)], "next_phase": phase.label}
+        if status != "pass":
+            state = target / "PROJECT_STATE.yaml"
+            _update_state_value(state, phase.gate, "blocked")
+            _update_state_value(state, "current_phase", phase.label)
+            _update_state_value(state, "current_gate", phase.gate)
+            _update_state_value(state, "status", "awaiting_revision")
+            return {"ok": False, "pending": [f"audit_status: {status}"], "next_phase": phase.label}
 
     state = target / "PROJECT_STATE.yaml"
     _update_state_value(state, phase.gate, "passed")
@@ -381,8 +398,11 @@ def pending_outputs(target: Path, outputs: List[str]) -> List[str]:
     for output in outputs:
         path = target / output
         if output == "manuscript/chapters":
-            chapters = list(path.glob("*.md")) if path.exists() else []
-            if not chapters:
+            chapters = list(path.glob("chapter-*.md")) if path.exists() else []
+            outline = target / "artifacts" / "05-outline.md"
+            expected = _outline_chapter_numbers(outline.read_text(encoding="utf-8")) if outline.exists() else []
+            actual = sorted(int(match.group(1)) for item in chapters if (match := re.fullmatch(r"chapter-(\d+)\.md", item.name)))
+            if not expected or actual != expected:
                 pending.append(output)
             continue
         if not path.exists():
@@ -392,6 +412,13 @@ def pending_outputs(target: Path, outputs: List[str]) -> List[str]:
         if not text or "BOOK_GENESIS_TEMPLATE" in text or text == template_for_output(output).strip():
             pending.append(output)
     return pending
+
+
+def _outline_chapter_numbers(outline: str) -> List[int]:
+    marker = re.compile(r"^\s*(?:#{1,6}\s*|\*\*\s*)(?:chapter|cap[ií]tulo|cap\.?)\s*0*(\d+)\b", re.IGNORECASE)
+    numbers = [int(match.group(1)) for line in outline.splitlines() if (match := marker.match(line))]
+    expected = list(range(1, max(numbers) + 1)) if numbers else []
+    return expected if sorted(numbers) == expected else []
 
 
 def fill_outputs_for_demo(target: Path, phase: Phase) -> None:
@@ -406,6 +433,20 @@ def fill_outputs_for_demo(target: Path, phase: Phase) -> None:
             )
             (chapters_dir / "chapter-02.md").write_text(
                 "# Chapter 2\n\nBy dawn, the audit log had started correcting him back.\n",
+                encoding="utf-8",
+            )
+            continue
+        if output == "artifacts/05-outline.md":
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                "# Demo Outline\n\n## Chapter 1: The Archive\n\nA beginning.\n\n## Chapter 2: The Audit\n\nAn ending.\n",
+                encoding="utf-8",
+            )
+            continue
+        if output == "artifacts/08-adversarial-audit.md":
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                "# Demo Audit\n\nMechanical demonstration only; no literary assessment.\n\naudit_status: pass\n",
                 encoding="utf-8",
             )
             continue

@@ -18,9 +18,12 @@ from runner.adapters import Adapter
 from runner.brief import TAIL_WORDS, build_chapter_brief, tail_words
 from runner.constants import GenreProfile, load_genre_profile
 from runner.filesystem import load_state_summary
+from runner.history import load_manifest, project_relative, record_draft, reserve_attempt, sha256, write_manifest
 from runner.judge import SingleJudge, Verdict
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+from runner.resources import resource_root
+
+REPO_ROOT = resource_root()
 AGENTS_DIR = REPO_ROOT / "agents"
 FIRST_CHAPTER_SLUG = "chapter-01"
 
@@ -104,7 +107,18 @@ def run_chapter(
     judge: Optional[Judge] = None,
     human_checkpoint: bool = False,
     progress: Optional[Callable[[str], None]] = None,
+    seed_draft: Optional[str] = None,
+    revise_on_flags: bool = False,
 ) -> ChapterResult:
+    """Run one chapter through the loop.
+
+    With ``seed_draft`` (polish mode, ADR 0006) the loop starts from existing
+    prose instead of calling the writer: the seed becomes draft 1 and the
+    blind judge decides whether the editor gets a turn at all. With
+    ``revise_on_flags`` the editor also takes a pass on chapters the judge
+    would still turn the page on but flagged; the ``vs_previous`` guard keeps
+    the original whenever a revision does not improve it.
+    """
     models = models or {}
     say = progress or (lambda _message: None)
     if human_checkpoint and chapter > 1:
@@ -119,36 +133,46 @@ def run_chapter(
     genre = summary.get("genre", "")
     reader = summary.get("audience", "")
     profile = load_genre_profile(genre)
-    brief = build_chapter_brief(project, chapter)
     previous_tail = _previous_tail(project, chapter)
 
     drafts_dir = project / "manuscript" / "drafts" / f"chapter-{chapter:02d}"
     evaluations_dir = project / "evaluations"
 
-    say(f"chapter {chapter}: writer ({adapters['writer'].name}{' ' + models['writer'] if models.get('writer') else ''})...")
-    draft = clean_chapter(
-        adapters["writer"].complete(writer_prompt(brief, chapter, genre, profile), model=models.get("writer", ""))
-    )
-    say(f"chapter {chapter}: writer done, {len(draft.split())} words")
-    if profile.disruptor_default and "disruptor" in adapters:
-        say(f"chapter {chapter}: disruptor...")
+    # Reserve before invoking writer/judge: a crashed/manual provider leaves a
+    # durable pending attempt and the retry gets a new immutable filename.
+    attempt_id, attempt_sequence = reserve_attempt(project, chapter)
+    if seed_draft is not None:
+        say(f"chapter {chapter}: polish: seeding from existing prose ({len(seed_draft.split())} words)")
+        draft = clean_chapter(seed_draft)
+    else:
+        brief = build_chapter_brief(project, chapter)
+        say(f"chapter {chapter}: writer ({adapters['writer'].name}{' ' + models['writer'] if models.get('writer') else ''})...")
         draft = clean_chapter(
-            adapters["disruptor"].complete(disruptor_prompt(draft, chapter, genre), model=models.get("disruptor", ""))
+            adapters["writer"].complete(writer_prompt(brief, chapter, genre, profile), model=models.get("writer", ""))
         )
-        say(f"chapter {chapter}: disruptor done, {len(draft.split())} words")
+        say(f"chapter {chapter}: writer done, {len(draft.split())} words")
+        if profile.disruptor_default and "disruptor" in adapters:
+            say(f"chapter {chapter}: disruptor...")
+            draft = clean_chapter(
+                adapters["disruptor"].complete(disruptor_prompt(draft, chapter, genre), model=models.get("disruptor", ""))
+            )
+            say(f"chapter {chapter}: disruptor done, {len(draft.split())} words")
 
     draft_number = 1
-    _write(drafts_dir / f"draft-{draft_number}.md", draft)
+    draft_path = _attempt_draft_path(drafts_dir, attempt_id, attempt_sequence, draft_number)
+    _write(draft_path, draft)
+    record_draft(project, chapter, attempt_id, draft_path)
     say(f"chapter {chapter}: judge ({getattr(judge, 'label', 'judge')})...")
     verdict = judge.judge(draft, previous_tail, genre, reader=reader)
-    _write(evaluations_dir / f"chapter-{chapter:02d}-judge-{draft_number}.md", verdict.raw)
+    verdict_path = _attempt_verdict_path(evaluations_dir, chapter, attempt_id, attempt_sequence, draft_number)
+    _write(verdict_path, verdict.raw)
     say(f"chapter {chapter}: judge says {_verdict_line(verdict)}")
     verdicts = [verdict]
 
-    best, best_verdict = draft, verdict
+    best, best_verdict, best_draft_path, best_verdict_path = draft, verdict, draft_path, verdict_path
     accepted = _accepted(verdict)
     cycles = 0
-    while not accepted and cycles < profile.max_revision_cycles:
+    while cycles < profile.max_revision_cycles and (not accepted or (revise_on_flags and best_verdict.flags)):
         cycles += 1
         say(f"chapter {chapter}: editor, cycle {cycles} of {profile.max_revision_cycles} (modes: {', '.join(best_verdict.flags) or 'stopped_at only'})...")
         candidate = clean_chapter(
@@ -158,15 +182,22 @@ def run_chapter(
             )
         )
         draft_number += 1
-        _write(drafts_dir / f"draft-{draft_number}.md", candidate)
+        draft_path = _attempt_draft_path(drafts_dir, attempt_id, attempt_sequence, draft_number)
+        _write(draft_path, candidate)
+        record_draft(project, chapter, attempt_id, draft_path)
         say(f"chapter {chapter}: judge compares draft {draft_number} with the previous best...")
         verdict = judge.judge(candidate, previous_tail, genre, previous_draft=best, reader=reader)
-        _write(evaluations_dir / f"chapter-{chapter:02d}-judge-{draft_number}.md", verdict.raw)
+        verdict_path = _attempt_verdict_path(evaluations_dir, chapter, attempt_id, attempt_sequence, draft_number)
+        _write(verdict_path, verdict.raw)
         say(f"chapter {chapter}: judge says {_verdict_line(verdict)}")
         verdicts.append(verdict)
         if verdict.vs_previous != "worse":
-            best, best_verdict = candidate, verdict
-        accepted = _accepted(verdict)
+            best, best_verdict, best_draft_path, best_verdict_path = candidate, verdict, draft_path, verdict_path
+        elif _accepted(best_verdict):
+            # Polish may seek to remove flags from an already accepted text. Once a
+            # candidate is worse, retain the accepted best and stop spending calls.
+            break
+        accepted = _accepted(best_verdict)
 
     label = getattr(judge, "label", "judge")
     if accepted:
@@ -174,7 +205,8 @@ def run_chapter(
         _write(final, best)
         result = ChapterResult(chapter, True, "accepted", cycles, final, verdicts)
     else:
-        result = ChapterResult(chapter, False, "blocked", cycles, drafts_dir / f"draft-{draft_number}.md", verdicts)
+        result = ChapterResult(chapter, False, "blocked", cycles, best_draft_path, verdicts)
+    _record_attempt(project, chapter, attempt_id, attempt_sequence, result, best_draft_path, best_verdict_path)
     _append_run_report(project, result, label)
     say(f"chapter {chapter}: {result.status} after {cycles} revision cycle(s)")
     return result
@@ -196,7 +228,7 @@ def writer_prompt(brief: str, chapter: int, genre: str, profile: GenreProfile) -
         + brief.strip()
         + "\n\n# OUTPUT\n\n"
         + f"Return only Chapter {chapter}, as Markdown, starting with a level-1 heading of the form "
-        + f"`# Chapter {chapter}: Title`. Prose only: no craft notes, no self-report, no preamble, no "
+        + f"`# Chapter {chapter}: Title`, translated into the book's language (Portuguese: `# Capítulo {chapter}: Título`). Prose only: no craft notes, no self-report, no preamble, no "
         + "commentary before or after the chapter. Stay inside the target length given in the brief "
         + f"({profile.words_per_chapter_min}-{profile.words_per_chapter_max} words unless the outline says otherwise).\n"
     )
@@ -264,6 +296,40 @@ def clean_chapter(raw: str) -> str:
 
 def _accepted(verdict: Verdict) -> bool:
     return verdict.turn_page and verdict.vs_previous != "worse"
+
+
+def _attempt_draft_path(drafts_dir: Path, attempt_id: str, sequence: int, draft: int) -> Path:
+    # Keep the original names for the first run so existing projects and scripts
+    # retain their familiar layout. Subsequent runs cannot overwrite those files.
+    return drafts_dir / (f"draft-{draft}.md" if sequence == 1 else f"{attempt_id}-draft-{draft}.md")
+
+
+def _attempt_verdict_path(evaluations_dir: Path, chapter: int, attempt_id: str, sequence: int, draft: int) -> Path:
+    stem = f"chapter-{chapter:02d}-judge-{draft}.md" if sequence == 1 else f"chapter-{chapter:02d}-judge-{attempt_id}-{draft}.md"
+    return evaluations_dir / stem
+
+
+def _record_attempt(
+    project: Path, chapter: int, attempt_id: str, sequence: int, result: ChapterResult, draft_path: Path, verdict_path: Path
+) -> None:
+    manifest = load_manifest(project, chapter)
+    record = {
+        "attempt_id": attempt_id,
+        "sequence": sequence,
+        "status": result.status,
+        "draft_path": project_relative(project, draft_path),
+        "verdict_path": project_relative(project, verdict_path),
+        "sha256": sha256(draft_path),
+    }
+    for index, existing in enumerate(manifest["attempts"]):
+        if existing.get("attempt_id") == attempt_id:
+            manifest["attempts"][index] = record
+            break
+    else:
+        manifest["attempts"].append(record)
+    if result.accepted:
+        manifest["accepted"] = dict(record)
+    write_manifest(project, chapter, manifest)
 
 
 def _previous_tail(project: Path, chapter: int) -> str:

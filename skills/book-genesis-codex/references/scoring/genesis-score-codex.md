@@ -1,144 +1,15 @@
-# Genesis Score
+# Editorial Diagnostic
+You are responsible for Phase 5 of Book Genesis. Read the canonical manuscript and the adversarial audit supplied in the context.
 
-## Purpose
+Produce an evidence-based editorial diagnostic in the book's language, saved to `artifacts/09-genesis-score-codex.md`. Keep that filename for compatibility; title the document "Editorial Diagnostic" (or its translation).
 
-Genesis Score is the single scoring contract for the Universal Book Genesis Core in `book-genesis-codex`.
-It must be used consistently across prompts, adapters, examples, reports, and manual review.
+This is a qualitative model-generated diagnostic. The runner computes its internal Genesis Score separately from model-reader verdicts and revision records. Do not invent another numerical score, weighted average, floor, acceptance threshold, human-reader result, market validation, or publication approval.
 
-The score exists to answer one question:
+For originality, theme, characters, prose, pacing, emotion, coherence, audience positioning, voice and opening:
+- identify one specific strength or uncertainty supported by a chapter and a short exact quotation, when available;
+- identify a concrete weakness only when the supplied prose supports it;
+- distinguish an observation from a subjective preference or an untested market hypothesis;
+- identify repairs still required by the audit, including any major rewrite;
+- say what you cannot evaluate from the supplied evidence.
 
-> Is this manuscript ready to survive contact with demanding readers, skeptical agents, and the market it claims to serve?
-
-## Order Of Operations
-
-The score only happens after Phase 4: Adversarial Audit.
-
-If the adversarial audit concludes `MAJOR REWRITE`, the score may be recorded provisionally but the manuscript is not eligible for approval.
-
-## Dimensions
-
-The score uses 10 dimensions:
-
-1. Originality
-2. Theme
-3. Characters
-4. Prose
-5. Pacing
-6. Emotion
-7. Coherence
-8. Market
-9. Voice
-10. Opening
-
-## What Each Dimension Measures
-
-### Originality
-
-- novelty of premise, lens, or execution
-- freedom from stale imitation
-
-### Theme
-
-- depth of the central question
-- resonance beyond plot mechanics
-
-### Characters
-
-- wound, desire, need, contradiction, and memory value
-
-### Prose
-
-- sentence quality
-- precision
-- texture
-- avoidance of cliche and explanatory drag
-
-### Pacing
-
-- tension control
-- variation
-- forward pull
-
-### Emotion
-
-- whether the book actually lands its intended feeling
-
-### Coherence
-
-- internal logic
-- continuity
-- causal integrity
-
-### Market
-
-- comp clarity
-- audience legibility
-- packaging viability
-
-### Voice
-
-- recognizability
-- distinctiveness
-- durability over pages
-
-### Opening
-
-- first-page grip
-- first-chapter promise
-- whether the ending ultimately justifies that promise
-
-## Scoring Rules
-
-- baseline assumption is competence, not excellence
-- any score above 8.0 must cite evidence
-- any score above 9.0 must cite multiple pieces of evidence
-- evidence must be textual, structural, or reader-impact based
-
-## Calculation
-
-Floor Score = minimum dimension score
-Weighted Average = weighted mean of the 10 dimensions
-
-Suggested weights:
-
-- Originality: 1.1
-- Theme: 1.0
-- Characters: 1.2
-- Prose: 1.0
-- Pacing: 1.0
-- Emotion: 1.1
-- Coherence: 0.9
-- Market: 0.8
-- Voice: 1.1
-- Opening: 0.8
-
-## Approval Gate
-
-Approval requires all of the following:
-
-- Floor Score >= 8.5
-- Weighted Average >= 9.0
-- no dimension below 8.0
-- evidence present for every dimension
-- adversarial audit not marked `MAJOR REWRITE`
-
-## Revision Logic
-
-If the manuscript fails:
-
-1. identify the weakest dimension
-2. define the concrete intervention
-3. verify that the intervention does not damage stronger dimensions
-4. rescore after revision
-
-## Output Contract
-
-The final report saved to `artifacts/09-genesis-score.md` or `artifacts/09-genesis-score-codex.md` must include:
-
-- project and runtime context
-- Dimension Scores table
-- Floor Score
-- Weighted Average
-- Gate Verdict
-- weakest dimension
-- required intervention or approval note
+Finish with a short prioritized revision list and questions for human readers. If there is no justified finding in a dimension, say that rather than fabricating one. The diagnostic may be performed by the same model family as the writer; never call it independent human validation.

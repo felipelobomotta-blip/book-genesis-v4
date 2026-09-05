@@ -15,21 +15,25 @@ python runner/cli.py run-phase <project>        # repeat for intake, foundation,
 python runner/cli.py book <project>             # every chapter; chapter 1 judged by the reader panel
 python runner/cli.py judge <file.md> --genre "..."   # blind-read any chapter
 python runner/cli.py panel <project> <n>        # the whole panel on a written chapter
+book-genesis review <project> [--open]          # inspect the generated project report
+book-genesis export <project> --format markdown|epub [--output PATH] [--overwrite]
 ```
 
 The design is recorded in `docs/adr/0001-runner-orquestra-juiz-cego.md` and `docs/adr/0002-autonomia-painel-adaptadores.md`. The short version:
 
-- the runner owns every file; models receive text and return text, never tools;
+- the runner owns project writes and consumes text responses. Claude tools are disabled; Codex uses an ephemeral read-only sandbox. Generic adapters follow their declared CLI capabilities;
 - the judge (`agents/book-judge.md`) is blind: prose only, no outline, no foundation, no writer notes; it compares drafts instead of scoring them;
 - the writer does not know any rubric; `agents/book-evaluator.md` is a diagnostic for the editor, not a gate;
-- no human is in the loop by default: chapter 1 is judged by a panel of blind readers (different personas, different families when installed); `--human` pauses for a person instead;
-- the runner uses whatever CLI is installed (`claude`, `codex`, anything declared in `runner/config/adapters.yaml`) or `--manual` prompt files; a single-family run carries a warning in `RUN_REPORT.md`;
+- the guided terminal session pauses for agreement on the brief, outline and chapter 1; `--yes` or noninteractive input runs autonomously. The panel consists of model readers with different personas, and different families when configured. `--human` additionally requires the explicit approval command;
+- the runner uses whatever CLI is installed (`claude`, `codex`, anything declared in `runner/config/adapters.yaml`) or `--manual` prompt files; a single-family run is allowed and carries a warning in `RUN_REPORT.md`;
+- Claude is invoked in safe mode with tools disabled. Codex is invoked for text-only output; that input contract does not prove every Codex tool is disabled in every host environment.
 - constants live in `runner/config/genre-profiles.yaml`, `runner/config/models.yaml` and `runner/config/adapters.yaml`; prompts reference them and never restate numbers.
 
 ## Rules
 
 - Persist decisions to files inside the project directory; keep `PROJECT_STATE.yaml` and `ASSUMPTIONS.md` truthful.
 - Never claim a chapter, a score, or a book is "ready" from an internal signal alone. Internal reader verdicts are not external validation.
+- A model-derived score describes this run's process signals. It is not human-reader research, a publication decision, or a sales forecast.
 - Write Portuguese artifacts and prose in Portuguese when the book is in Portuguese.
 - Do not resurrect anything from `legacy/` onto the canonical path without a new ADR.
 
@@ -39,7 +43,7 @@ The design is recorded in `docs/adr/0001-runner-orquestra-juiz-cego.md` and `doc
 - `agents/` — prompt templates read by the runner (also installable as Claude Code subagents).
 - `skills/book-genesis-codex/references/` — phase prompts and the manifest the runner follows.
 - `knowledge/` — bestseller research the templates cite.
-- `tests/` — 52 tests, no network (`python -m pytest tests -q`).
+- `tests/` — offline regression tests, including wheel installation and local subprocess checks (`python -m pytest tests -q`). Real provider verification is a separate, explicit exercise.
 - `legacy/` — the three earlier pipelines, moved on 2026-09-02, not maintained.
 
 ## Public Documentation

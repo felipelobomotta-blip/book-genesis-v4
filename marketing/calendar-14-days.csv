@@ -1,0 +1,15 @@
+day,objective,asset_or_action,channel,success_signal,do_not_do
+D0,Make the beta legible,Apply verified metadata and social preview then publish the pre-release only after tag verification,GitHub,Release page and repository links render correctly,Do not post externally before checking the tagged commit
+D1,Invite first technical readers,Publish the founder LinkedIn post and open the GitHub Discussion,LinkedIn and GitHub,Discussion has reproducible feedback template and replies are possible,Do not claim launch numbers or cross-post automatically
+D2,Explain the product tension,Publish X thread with the audit-gate story,X,Replies identify a concrete question or test case,Do not quote-post strangers for attention
+D3,Show the workflow,Publish the 60-second demo with edited-for-time disclosure if applicable,YouTube,Video accurately shows real beta states,Do not simulate a perfect generation
+D4,Reach visual writing communities,Publish carousel and Instagram/Facebook caption,Instagram and Facebook,Saves or comments ask about a specific workflow step,Do not use engagement pods or invented testimonials
+D5,Listen and repair,Review issues and discussion comments then select one reproducible improvement,GitHub,One triaged issue has environment and reproduction details,Do not promise dates for unscoped fixes
+D6,Ask for craft feedback,Publish the Reddit post only in a relevant community after reading its rules,Reddit,One substantive critique about setup or writing workflow,Do not repost into unrelated subreddits
+D7,Share a small build note,Post one Threads update about the audit gate and a real limitation,Threads,Conversation stays specific and useful,Do not repeat the full launch copy
+D8,Document learning,Publish a GitHub Discussion update summarizing confirmed bugs and limits,GitHub,Reported issues have a visible status,Do not frame unverified feedback as validation
+D9,Test contributor path,Invite a narrowly scoped contribution from an existing issue,GitHub,Contributor can identify files and acceptance criteria,Do not DM strangers unsolicited
+D10,Reach video-native viewers,Publish one 30-second short using a different hook,TikTok Reels Shorts,Viewers can state what the tool does in their own words,Do not promise that it writes bestsellers
+D11,Technical audience,Submit Show HN only if the repository is usable and the founder can answer technical questions,Hacker News,Technical questions receive factual answers,Do not treat HN as a traffic stunt
+D12,Close the first loop,Ship or document the most reproducible fix and link evidence,GitHub,Fix has a regression test or a documented reason not to change,Do not bury unresolved limitations
+D13,Reflect and choose next experiment,Write a transparent beta update with what was learned and the next test,GitHub and founder channel,Next experiment has a measurable question,Do not invent retention conversion or user counts

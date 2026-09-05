@@ -1,0 +1,32 @@
+{
+  "product": "Book Genesis 5 — Imagination Edition",
+  "language": "en",
+  "created": "2026-09-05",
+  "method": "AI-generated editorial artwork; English copy visually inspected. Artwork is not a product screenshot.",
+  "files": [
+    {
+      "file": "launch-landscape-en.png",
+      "width": 1672,
+      "height": 941,
+      "sha256": "0c03d52ef8e1f169026d58ce43f3c2353d94f252e16b26acfdc7cb5f74884a19"
+    },
+    {
+      "file": "launch-square-en.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "13224730b80363bbff04eba53339f89a7b9d43949f7702fac8feac1f703c2e95"
+    },
+    {
+      "file": "launch-portrait-en.png",
+      "width": 1122,
+      "height": 1402,
+      "sha256": "f99745a01aa4ae22efbdc9dea68e85ee36387bd030a39f32fcbdee44965692ab"
+    },
+    {
+      "file": "launch-story-en.png",
+      "width": 941,
+      "height": 1672,
+      "sha256": "31a02cf9c6ab4a385b1c5d44261f0772f6175af63abd4755acd3c03e657832bc"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ them; ``q`` stops (``book-genesis resume`` picks it up). Without a terminal, or 
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 import re
 from typing import Dict, List, Optional, Protocol, Tuple
@@ -20,8 +21,9 @@ from runner.book import count_chapters, run_book
 from runner.chapter import AwaitingHuman
 from runner.filesystem import advance_phase, current_phase, load_state_summary, update_state_value
 from runner.judge import parse_verdict
-from runner.phases import DRAFTING_LABEL, run_phase
+from runner.phases import DRAFTING_LABEL, recover_pending_publication, run_phase
 from runner.score import ScoreCard, genesis_score
+from runner.history import sha256
 
 AUTHOR_NOTES = Path("work") / "author-notes.md"
 STAGES: Tuple[str, ...] = ("Intake", "Foundation", "Architecture", "Drafting", "Audit", "Score", "Package")
@@ -74,6 +76,7 @@ class SessionResult:
 
 
 def run_session(project: Path, setup, view: View, *, yes: bool = False, human: bool = False, chapters: Optional[int] = None) -> SessionResult:
+    recover_pending_publication(project)
     summary = load_state_summary(project)
     view.header(
         title=summary.get("title", ""),
@@ -83,6 +86,10 @@ def run_session(project: Path, setup, view: View, *, yes: bool = False, human: b
         warnings=list(getattr(setup, "warnings", [])),
     )
     try:
+        if not yes:
+            outcome = _resume_pending_checkpoint(project, setup, view)
+            if outcome is not None:
+                return outcome
         outcome = _phases(project, setup, view, ask=not yes, stop_at=DRAFTING_LABEL)
         if outcome is not None:
             return outcome
@@ -174,6 +181,11 @@ def _phases(project: Path, setup, view: View, *, ask: bool, stop_at: Optional[st
         view.stage_start(stage)
         result = run_phase(project, setup.adapters, setup.models)
         if not result.ok:
+            if phase.label == "Phase 4: Adversarial Audit" and any(item.startswith("audit_status:") for item in result.pending):
+                report = project / "artifacts" / "08-adversarial-audit.md"
+                message = f"Editorial revision required ({', '.join(result.pending)}). Read {report}; revise the manuscript before resuming."
+                view.stage_stop(stage, message)
+                return SessionResult("blocked", message)
             message = "not advanced; still missing: " + ", ".join(result.pending)
             view.stage_fail(stage, message)
             return SessionResult("failed", message)
@@ -193,6 +205,7 @@ def _agree_on_phase(project: Path, setup, view: View, phase, stage: str) -> Opti
         body = f"{lead}\n\n---\n\n" + strip_leading_heading(_read(project / relative))
         kind, notes = interpret(view.checkpoint(title, body, CHECKPOINT_HINT))
         if kind == "stop":
+            _save_checkpoint(project, {"kind": "phase", "phase": phase.label, "stage": stage, "relative": relative, "title": title, "lead": lead})
             return _stopped(project, view, stage)
         if kind == "continue":
             return None
@@ -234,12 +247,19 @@ def _drafting(project: Path, setup, view: View, *, ask: bool, human: bool, cap: 
         outcome = _book_outcome(book, view)
         if outcome is not None:
             return outcome
+        approval = project / "work" / "chapter-01.checkpoint-approved.json"
+        current = project / "manuscript" / "chapters" / "chapter-01.md"
+        already_approved = approval.exists() and current.exists() and _approved_hash(approval) == sha256(current)
         reruns = 0
-        while True:
+        if already_approved:
+            approval.unlink()
+        while not already_approved:
             kind, notes = interpret(view.checkpoint("Chapter 1, read blind", chapter_report(project, 1), CHAPTER_HINT))
             if kind == "stop":
+                _save_checkpoint(project, {"kind": "chapter", "chapter": 1, "stage": "Drafting"})
                 return _stopped(project, view, "Drafting")
             if kind == "continue":
+                _save_chapter_approval(project, 1)
                 break
             save_notes(project, notes)
             if reruns >= MAX_RERUNS:
@@ -283,25 +303,36 @@ def chapter_report(project: Path, number: int) -> str:
         aggregate = verdict_text[match.start():] if match else verdict_text
         verdict = parse_verdict(aggregate)
         if match:
-            lines.append(f"**{match.group('yes')} of {match.group('seats')} blind readers would turn the page.**")
+            lines.append(f"**{match.group('yes')} of {match.group('seats')} model readers would turn the page.**")
         else:
-            lines.append("**The blind reader would turn the page.**" if verdict.turn_page else "**The blind reader stopped.**")
+            lines.append("**The model reader would turn the page.**" if verdict.turn_page else "**The model reader stopped.**")
         if verdict.stopped_at and verdict.stopped_at != "none":
             lines.append(f"Stopped at: {verdict.stopped_at}")
         lines.append(f"Flags: {', '.join(verdict.flags)}" if verdict.flags else "No flags.")
         if verdict.remember:
             lines.append("")
-            lines.append("What they remembered:")
+            lines.append("Reported immediately by the model reader:")
             lines += [f"- {item}" for item in verdict.remember]
     chapter = project / "manuscript" / "chapters" / f"chapter-{number:02d}.md"
     if chapter.exists():
         text = strip_leading_heading(chapter.read_text(encoding="utf-8").strip())
-        excerpt = text[:EXCERPT_CHARS] + ("..." if len(text) > EXCERPT_CHARS else "")
-        lines += ["", "---", "", excerpt]
+        lines += ["", "---", "", text]
     return "\n".join(lines)
 
 
 def _latest_verdict_text(project: Path, number: int) -> str:
+    manifest = project / "manuscript" / "chapters" / "history" / f"chapter-{number:02d}" / "manifest.json"
+    canonical = project / "manuscript" / "chapters" / f"chapter-{number:02d}.md"
+    if manifest.exists() and canonical.exists():
+        try:
+            accepted = json.loads(manifest.read_text(encoding="utf-8")).get("accepted")
+            if isinstance(accepted, dict) and accepted.get("status") == "accepted":
+                relative = accepted.get("verdict_path")
+                candidate = (project / relative).resolve() if isinstance(relative, str) else None
+                if candidate and project.resolve() in candidate.parents and candidate.is_file():
+                    return candidate.read_text(encoding="utf-8")
+        except (OSError, ValueError, json.JSONDecodeError):
+            return ""
     evaluations = project / "evaluations"
     if not evaluations.exists():
         return ""
@@ -347,6 +378,49 @@ def _stopped(project: Path, view: View, stage: str) -> SessionResult:
     return SessionResult("stopped", message)
 
 
+def _checkpoint_path(project: Path) -> Path:
+    return project / "work" / "pending-checkpoint.json"
+
+
+def _save_checkpoint(project: Path, data: Dict[str, object]) -> None:
+    path = _checkpoint_path(project)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def _resume_pending_checkpoint(project: Path, setup, view: View) -> Optional[SessionResult]:
+    path = _checkpoint_path(project)
+    if not path.exists():
+        return None
+    try:
+        pending = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        raise ValueError(f"invalid pending checkpoint: {path}")
+    if pending.get("kind") == "phase":
+        relative, title, lead = pending["relative"], pending["title"], pending["lead"]
+        kind, notes = interpret(view.checkpoint(title, f"{lead}\n\n---\n\n" + strip_leading_heading(_read(project / relative)), CHECKPOINT_HINT))
+        if kind == "stop":
+            return _stopped(project, view, str(pending["stage"]))
+        path.unlink()
+        if kind == "notes":
+            save_notes(project, notes)
+            _rewind(project, str(pending["phase"]))
+        return None
+    if pending.get("kind") == "chapter":
+        number = int(pending["chapter"])
+        kind, notes = interpret(view.checkpoint(f"Chapter {number}, read blind", chapter_report(project, number), CHAPTER_HINT))
+        if kind == "stop":
+            return _stopped(project, view, "Drafting")
+        path.unlink()
+        if kind == "notes":
+            save_notes(project, notes)
+            _forget_chapter(project, number)
+        else:
+            _save_chapter_approval(project, number)
+        return None
+    raise ValueError(f"unknown pending checkpoint kind: {pending.get('kind')}")
+
+
 def _rewind(project: Path, label: str) -> None:
     state = project / "PROJECT_STATE.yaml"
     update_state_value(state, "current_phase", label)
@@ -354,9 +428,31 @@ def _rewind(project: Path, label: str) -> None:
 
 
 def _forget_chapter(project: Path, number: int) -> None:
-    path = project / "manuscript" / "chapters" / f"chapter-{number:02d}.md"
-    if path.exists():
-        path.unlink()
+    """Request a replacement without deleting the accepted chapter first.
+
+    The marker survives a stopped session, so resume performs the pending rewrite
+    rather than silently treating the old canonical snapshot as complete.
+    """
+    marker = project / "work" / f"rewrite-chapter-{number:02d}.pending"
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text("rewrite requested by author notes\n", encoding="utf-8")
+    approval = project / "work" / f"chapter-{number:02d}.checkpoint-approved.json"
+    if approval.exists():
+        approval.unlink()
+
+
+def _approved_hash(path: Path) -> str:
+    try:
+        return str(json.loads(path.read_text(encoding="utf-8")).get("sha256", ""))
+    except json.JSONDecodeError:
+        return ""
+
+
+def _save_chapter_approval(project: Path, number: int) -> None:
+    chapter = project / "manuscript" / "chapters" / f"chapter-{number:02d}.md"
+    if chapter.exists():
+        path = project / "work" / f"chapter-{number:02d}.checkpoint-approved.json"
+        path.write_text(json.dumps({"sha256": sha256(chapter)}) + "\n", encoding="utf-8")
 
 
 def _phase_summary(project: Path, label: str, written: List[str]) -> str:

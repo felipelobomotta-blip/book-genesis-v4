@@ -15,6 +15,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from runner import bridge_antigravity as agy  # type: ignore  # noqa: E402
 from runner import bridge_hermes as hermes  # type: ignore  # noqa: E402
+from runner import bridge_opencode as opencode  # type: ignore  # noqa: E402
 from runner.constants import USER_ADAPTERS_ENV, load_generic_adapters, user_adapters_path  # type: ignore  # noqa: E402
 
 # Exactly what agy 1.1.26 wrote on 2026-09-04, trimmed.
@@ -72,6 +73,18 @@ class HermesTests(unittest.TestCase):
     def test_the_prompt_goes_on_stdin_and_the_model_is_a_flag(self) -> None:
         self.assertEqual(["hermes", "chat", "-Q", "--query-file", "-"], hermes.build_command(""))
         self.assertEqual(["-m", "anthropic/claude-sonnet-4-5"], hermes.build_command("anthropic/claude-sonnet-4-5")[-2:])
+
+
+class OpencodeTests(unittest.TestCase):
+    def test_text_events_are_concatenated(self) -> None:
+        stream = '{"type":"text","part":{"type":"text","text":"First "}}\n{"part":{"type":"text","text":"second"}}\n'
+        self.assertEqual("First second", opencode.extract_text(stream))
+
+    def test_malformed_or_empty_stream_is_a_failure(self) -> None:
+        with self.assertRaises(ValueError):
+            opencode.extract_text("not-json\n")
+        with self.assertRaises(ValueError):
+            opencode.extract_text('{"type":"step"}\n')
 
 
 class UserAdaptersTests(unittest.TestCase):
