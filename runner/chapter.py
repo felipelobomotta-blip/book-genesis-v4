@@ -17,7 +17,7 @@ from typing import Callable, Dict, List, Optional, Protocol
 from runner.adapters import Adapter
 from runner.brief import TAIL_WORDS, build_chapter_brief, tail_words
 from runner.constants import GenreProfile, load_genre_profile
-from runner.filesystem import load_state_summary
+from runner.filesystem import load_state_summary, set_human_checkpoint_required
 from runner.history import load_manifest, project_relative, record_draft, reserve_attempt, sha256, write_manifest
 from runner.judge import SingleJudge, Verdict
 
@@ -98,6 +98,21 @@ def approve(project: Path, slug: str) -> Path:
     return marker
 
 
+def resolve_human_checkpoint(project: Path, *, requested: bool = False) -> bool:
+    """Return the durable human-checkpoint requirement for this project.
+
+    ``--human`` is an opt-in for a project, not only for the process that happened
+    to create its first chapter. Older projects may have been left with the
+    historical ``awaiting_human`` status before the opt-in flag existed; adopt
+    that state on the first resume so they cannot be advanced accidentally.
+    """
+    summary = load_state_summary(project)
+    required = requested or summary.get("human_checkpoint_required") == "true" or summary.get("status") == "awaiting_human"
+    if required and summary.get("human_checkpoint_required") != "true":
+        set_human_checkpoint_required(project, True)
+    return required
+
+
 def run_chapter(
     project: Path,
     chapter: int,
@@ -121,7 +136,7 @@ def run_chapter(
     """
     models = models or {}
     say = progress or (lambda _message: None)
-    if human_checkpoint and chapter > 1:
+    if resolve_human_checkpoint(project, requested=human_checkpoint) and chapter > 1:
         marker = project / "approvals" / f"{FIRST_CHAPTER_SLUG}.approved"
         if not marker.exists():
             raise AwaitingHuman(project / "manuscript" / "chapters" / f"{FIRST_CHAPTER_SLUG}.md", marker)

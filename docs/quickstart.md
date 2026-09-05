@@ -61,7 +61,7 @@ The guided session pauses after the brief, the outline, and a blind reading of c
 book-genesis resume books/returned-books
 ```
 
-Use `--human` to require a deliberate human approval after chapter 1. Without it, the model-reader panel runs and the session continues automatically. Use `--chapters N` for a limited run.
+Use `--human` to require a deliberate human approval after chapter 1. The choice is saved with that project, so every later `resume` continues to require `approve` even when invoked with `--yes`. Without it, the model-reader panel runs and the session continues automatically. Use `--chapters N` for a limited run.
 
 ## Read and export
 

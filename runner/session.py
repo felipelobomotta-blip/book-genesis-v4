@@ -18,7 +18,7 @@ from typing import Dict, List, Optional, Protocol, Tuple
 
 from runner.adapters import AdapterError, AwaitingManual
 from runner.book import count_chapters, run_book
-from runner.chapter import AwaitingHuman
+from runner.chapter import AwaitingHuman, resolve_human_checkpoint
 from runner.filesystem import advance_phase, current_phase, load_state_summary, update_state_value
 from runner.judge import parse_verdict
 from runner.phases import DRAFTING_LABEL, recover_pending_publication, run_phase
@@ -77,6 +77,7 @@ class SessionResult:
 
 def run_session(project: Path, setup, view: View, *, yes: bool = False, human: bool = False, chapters: Optional[int] = None) -> SessionResult:
     recover_pending_publication(project)
+    human = resolve_human_checkpoint(project, requested=human)
     summary = load_state_summary(project)
     view.header(
         title=summary.get("title", ""),

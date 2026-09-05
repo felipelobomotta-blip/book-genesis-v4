@@ -98,8 +98,14 @@ class RunBookTests(unittest.TestCase):
         self.assertEqual([1], result.chapters_done)
         self.assertFalse(self.chapter_file(2).exists())
 
+        # A later low-level call cannot discard the project-level opt-in simply
+        # because it omitted the transient command-line flag.
+        result = run_book(self.project, adapters, models)
+        self.assertEqual("awaiting_human", result.status)
+        self.assertFalse(self.chapter_file(2).exists())
+
         approve(self.project, "chapter-01")
-        result = run_book(self.project, adapters, models, human_checkpoint=True)
+        result = run_book(self.project, adapters, models)
         self.assertEqual("completed", result.status)
         self.assertEqual([2], result.chapters_done)
 

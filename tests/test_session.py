@@ -9,7 +9,8 @@ import unittest
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from runner.filesystem import scaffold_project  # type: ignore  # noqa: E402
+from runner.chapter import approve  # type: ignore  # noqa: E402
+from runner.filesystem import scaffold_project, update_state_value  # type: ignore  # noqa: E402
 from runner.roles import build_role_adapters  # type: ignore  # noqa: E402
 from runner.session import interpret, run_session, strip_leading_heading  # type: ignore  # noqa: E402
 
@@ -236,6 +237,32 @@ class SessionTests(unittest.TestCase):
         self.assertIn("stopped after 1 of 2 chapters", result.message)
         self.assertTrue((self.project / "manuscript" / "chapters" / "chapter-01.md").exists())
         self.assertFalse((self.project / "manuscript" / "chapters" / "chapter-02.md").exists())
+
+    def test_legacy_awaiting_human_state_is_adopted_and_requires_approval(self) -> None:
+        first = self.setup_with(INTAKE, FOUNDATION, ARCHITECTURE, *CHAPTER_ONE)
+        initial = run_session(self.project, first, RecordingView(), yes=True, human=True)
+        self.assertEqual("awaiting_human", initial.status)
+
+        # Mimic a pre-durable-flag project that recorded only its old status.
+        state = self.project / "PROJECT_STATE.yaml"
+        state.write_text(
+            "\n".join(
+                line for line in state.read_text(encoding="utf-8").splitlines()
+                if "human_checkpoint_required:" not in line
+            ) + "\n",
+            encoding="utf-8",
+        )
+        update_state_value(state, "status", "awaiting_human")
+
+        blocked = run_session(self.project, self.setup_with(*CHAPTER_TWO, AUDIT, SCORE, PACKAGE), RecordingView(), yes=True)
+        self.assertEqual("awaiting_human", blocked.status)
+        self.assertFalse((self.project / "manuscript" / "chapters" / "chapter-02.md").exists())
+        self.assertIn('human_checkpoint_required: "true"', state.read_text(encoding="utf-8"))
+
+        approve(self.project, "chapter-01")
+        completed = run_session(self.project, self.setup_with(*CHAPTER_TWO, AUDIT, SCORE, PACKAGE), RecordingView(), yes=True)
+        self.assertEqual("completed", completed.status)
+        self.assertTrue((self.project / "manuscript" / "chapters" / "chapter-02.md").exists())
 
 
 class StripHeadingTests(unittest.TestCase):

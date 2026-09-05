@@ -9,7 +9,7 @@ from typing import Callable, Dict, List, Optional
 
 from runner.adapters import Adapter
 from runner.brief import CHAPTER_MARK
-from runner.chapter import AwaitingHuman, Judge, run_chapter
+from runner.chapter import AwaitingHuman, FIRST_CHAPTER_SLUG, Judge, resolve_human_checkpoint, run_chapter
 
 
 @dataclass
@@ -74,12 +74,18 @@ def run_book(
         raise ValueError("the outline has no `## Chapter N` headings; nothing to write")
 
     say = progress or (lambda _message: None)
+    human_checkpoint = resolve_human_checkpoint(project, requested=human_checkpoint)
     gate_chapters = set(panel_chapters if panel_chapters is not None else [1])
     first = start or 1
     last = end or total
     _validate_range(first, last, total)
     done: List[int] = []
     for number in range(first, last + 1):
+        if human_checkpoint and number > 1:
+            marker = project / "approvals" / f"{FIRST_CHAPTER_SLUG}.approved"
+            if not marker.exists():
+                waiting = AwaitingHuman(project / "manuscript" / "chapters" / f"{FIRST_CHAPTER_SLUG}.md", marker)
+                return BookResult("awaiting_human", done, number, str(waiting))
         pending_rewrite = project / "work" / f"rewrite-chapter-{number:02d}.pending"
         if (project / "manuscript" / "chapters" / f"chapter-{number:02d}.md").exists() and not pending_rewrite.exists():
             say(f"chapter {number}: already written, skipped")
