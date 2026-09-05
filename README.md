@@ -27,6 +27,14 @@ It does not promise a bestseller. It gives a creator an inspectable process, sav
 
 [Explore the reader sample](examples/reader-demo/README.md). This is a scripted interface demonstration; it is not a quality sample from a model-generated book.
 
+## Watch it in a minute
+
+[![Watch the narrated Book Genesis 5 walkthrough](marketing/video/walkthrough-poster.jpg)](https://github.com/felipelobomotta-blip/book-genesis-v4/releases/download/v5.0.0-beta.1/book-genesis-5-walkthrough-en.mp4)
+
+**[Watch the 60-second walkthrough](https://github.com/felipelobomotta-blip/book-genesis-v4/releases/download/v5.0.0-beta.1/book-genesis-5-walkthrough-en.mp4)** · [33-second vertical cut](https://github.com/felipelobomotta-blip/book-genesis-v4/releases/download/v5.0.0-beta.1/book-genesis-5-vertical-en.mp4) · [Subtitles, source, and instructions](docs/video-walkthrough.md)
+
+English narration, recorded CLI output, and real reader interactions. Story content is a labeled scripted fixture; the video is edited for time.
+
 ## The promise
 
 Book Genesis supports the work around the pages: deciding what the story is, protecting the author’s notes, testing whether a chapter holds attention, and keeping the trail of revisions visible.

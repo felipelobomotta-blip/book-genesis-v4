@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+.r1 {color: #58d1eb; text-decoration-color: #58d1eb; font-weight: bold}
+.r2 {font-weight: bold}
+.r3 {color: #f4005f; text-decoration-color: #f4005f; font-weight: bold}
+.r4 {color: #d9d9d9; text-decoration-color: #d9d9d9}
+.r5 {color: #d9d9d9; text-decoration-color: #d9d9d9; font-weight: bold}
+body {
+    color: #d9d9d9;
+    background-color: #0c0c0c;
+}
+</style>
+</head>
+<body style="margin:0;padding:24px">
+    <pre style="font-family:Menlo,'DejaVu Sans Mono',consolas,'Courier New',monospace"><code style="font-family:inherit"><span class="r1">$ book-genesis --help</span>
+book-genesis - develop your idea with drafts, model feedback, and saved revisions.
+
+  book-genesis setup            choose your providers and models. Once.
+  book-genesis new              give it an idea; guide the writing and review process
+  book-genesis resume <span class="r2">&lt;</span><span class="r3">folder</span><span class="r4">&gt;  continue where you stopped</span>
+<span class="r4">  book-genesis doctor           what will run where, and whether every key is set</span>
+<span class="r4">  book-genesis review &lt;folder&gt;  read chapters and safe local version history in a browser</span>
+<span class="r4">  book-genesis export &lt;folder&gt; --format markdown|epub  create a local canonical export</span>
+
+<span class="r4">Useful flags on `new` and `resume`:</span>
+<span class="r4">  --yes        never ask </span><span class="r5">(</span><span class="r4">also what happens with no terminal: a script, cron, CI</span><span class="r5">)</span>
+<span class="r4">  --plain      plain lines instead of the live interface</span>
+<span class="r4">  --human      pause after chapter </span><span class="r1">1</span><span class="r4"> until you have read it yourself</span>
+<span class="r4">  --manual     no provider at all: paste every reply by hand</span>
+<span class="r4">  --chapters N stop after N chapters instead of writing the whole book</span>
+
+<span class="r4">One step at a time: brief, chapter, book, polish, judge, panel, run-phase, approve,</span>
+<span class="r4">init, status, validate, demo. Run `book-genesis &lt;command</span><span class="r2">&gt;</span> --help` for any of them.
+An audit that requests revision stops completion until the manuscript is revised.
+
+</code></pre>
+</body>
+</html>

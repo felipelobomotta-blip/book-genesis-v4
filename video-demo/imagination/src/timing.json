@@ -1,0 +1,119 @@
+{
+  "fps": 30,
+  "long": [
+    {
+      "id": "hook",
+      "caption": "That idea deserves a first chapter.",
+      "text": "Every book starts as a thought worth saving. Book Genesis Five helps you turn that thought into a working manuscript.",
+      "voice": "voice/long-hook.wav",
+      "frames": 242,
+      "speechSeconds": 7.538095238095238
+    },
+    {
+      "id": "setup",
+      "caption": "Python 3.10+ · Your chosen model route",
+      "text": "Install with Python three point ten or newer, and connect the model route you already use.",
+      "voice": "voice/long-setup.wav",
+      "frames": 196,
+      "speechSeconds": 6.028480725623583
+    },
+    {
+      "id": "start",
+      "caption": "Start with one sentence.",
+      "text": "Run book genesis new. Add one sentence for your idea, and choose the language.",
+      "voice": "voice/long-start.wav",
+      "frames": 205,
+      "speechSeconds": 6.3284353741496595
+    },
+    {
+      "id": "checkpoint",
+      "caption": "Review. Leave a note. Resume later.",
+      "text": "Review the brief, outline, and first chapter. Press Enter to continue, or type a note to steer the work. Quit and resume whenever you need.",
+      "voice": "voice/long-checkpoint.wav",
+      "frames": 341,
+      "speechSeconds": 10.858004535147392
+    },
+    {
+      "id": "reader",
+      "caption": "Read locally. Compare versions.",
+      "text": "Your drafts and revision history stay on your machine. Open the local reader, move between chapters, and compare versions.",
+      "voice": "voice/long-reader.wav",
+      "frames": 280,
+      "speechSeconds": 8.80312925170068
+    },
+    {
+      "id": "export",
+      "caption": "Markdown + EPUB · Partial work is labeled",
+      "text": "Export your working manuscript as Markdown or E pub. Incomplete projects are labeled as partial.",
+      "voice": "voice/long-export.wav",
+      "frames": 227,
+      "speechSeconds": 7.047981859410431
+    },
+    {
+      "id": "cta",
+      "caption": "Creativity comes first. Your story. Your choices.",
+      "text": "Book Genesis Five. Open source beta. Creativity comes first. Your story. Your choices.",
+      "voice": "voice/long-cta.wav",
+      "frames": 306,
+      "speechSeconds": 9.693605442176871
+    }
+  ],
+  "short": [
+    {
+      "id": "hook",
+      "caption": "You have the idea.",
+      "text": "You have the idea. The story stays yours.",
+      "voice": "voice/short-hook.wav",
+      "frames": 131,
+      "speechSeconds": 4.093877551020408
+    },
+    {
+      "id": "setup",
+      "caption": "Python 3.10+ + a model route",
+      "text": "With Python installed, connect your model route.",
+      "voice": "voice/short-setup.wav",
+      "frames": 118,
+      "speechSeconds": 3.688888888888889
+    },
+    {
+      "id": "start",
+      "caption": "Start with one sentence.",
+      "text": "Run book genesis new, and start with one sentence.",
+      "voice": "voice/short-start.wav",
+      "frames": 129,
+      "speechSeconds": 4.033922902494331
+    },
+    {
+      "id": "checkpoint",
+      "caption": "Brief · Outline · Chapter 1",
+      "text": "Review the brief, outline, and first chapter. Leave a note, pause, and resume.",
+      "voice": "voice/short-checkpoint.wav",
+      "frames": 216,
+      "speechSeconds": 6.933650793650794
+    },
+    {
+      "id": "reader",
+      "caption": "Compare versions.",
+      "text": "Read locally and compare versions.",
+      "voice": "voice/short-reader.wav",
+      "frames": 88,
+      "speechSeconds": 2.684172335600907
+    },
+    {
+      "id": "export",
+      "caption": "Export Markdown or EPUB.",
+      "text": "Export your working manuscript as E pub.",
+      "voice": "voice/short-export.wav",
+      "frames": 105,
+      "speechSeconds": 3.2588662131519275
+    },
+    {
+      "id": "cta",
+      "caption": "Creativity comes first.",
+      "text": "Book Genesis Five. Open source beta. Creativity comes first.",
+      "voice": "voice/short-cta.wav",
+      "frames": 197,
+      "speechSeconds": 6.303854875283447
+    }
+  ]
+}

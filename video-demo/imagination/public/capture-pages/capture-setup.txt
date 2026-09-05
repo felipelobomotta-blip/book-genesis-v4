@@ -1,0 +1,19 @@
+book-genesis - develop your idea with drafts, model feedback, and saved revisions.
+
+  book-genesis setup            choose your providers and models. Once.
+  book-genesis new              give it an idea; guide the writing and review process
+  book-genesis resume <folder>  continue where you stopped
+  book-genesis doctor           what will run where, and whether every key is set
+  book-genesis review <folder>  read chapters and safe local version history in a browser
+  book-genesis export <folder> --format markdown|epub  create a local canonical export
+
+Useful flags on `new` and `resume`:
+  --yes        never ask (also what happens with no terminal: a script, cron, CI)
+  --plain      plain lines instead of the live interface
+  --human      pause after chapter 1 until you have read it yourself
+  --manual     no provider at all: paste every reply by hand
+  --chapters N stop after N chapters instead of writing the whole book
+
+One step at a time: brief, chapter, book, polish, judge, panel, run-phase, approve,
+init, status, validate, demo. Run `book-genesis <command> --help` for any of them.
+An audit that requests revision stops completion until the manuscript is revised.
