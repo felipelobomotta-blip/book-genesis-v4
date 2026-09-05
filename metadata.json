@@ -1,0 +1,31 @@
+{
+  "repository_description": "An open-source writing runner that turns an idea into a manuscript, preserves the work, and sends it through a blind editorial read.",
+  "description_character_count": 132,
+  "topics": [
+    "ai-writing",
+    "creative-writing",
+    "writing-tools",
+    "book-writing",
+    "fiction-writing",
+    "open-source",
+    "python",
+    "claude-code",
+    "openai-codex",
+    "llm",
+    "storytelling",
+    "manuscript",
+    "epub",
+    "cli",
+    "indie-authors"
+  ],
+  "taglines": {
+    "primary_en": "Creativity comes first. Your story. Your choices.",
+    "short_en": "Bring the idea. Keep the story.",
+    "technical_en": "A writing runner with blind editorial reads and durable project history."
+  },
+  "social_preview": {
+    "recommended_asset": "marketing/assets/social-preview-1280x640.png",
+    "copy_en": "Book Genesis 5 / Creativity comes first. Your story. Your choices.",
+    "note": "1280x640 PNG rendered from the editable SVG in assets/readme/hero.svg. Upload in GitHub repository Settings > Social preview."
+  }
+}

@@ -80,7 +80,7 @@ PHASE 3:    THE CHAPTER LOOP — per chapter, SEQUENTIAL:
             Step D.5 ENTITY UPDATE       → entity-tracker      (UPDATE, every 3-5 ch)
             Step E  MECH PREPROCESS      → bash (no agent)
             Step F  EVALUATE             → book-evaluator
-            Step G  QUALITY GATE         → internal (auto-loop max 3; fixes via book-editor)
+            Step G  QUALITY GATE         → internal (auto-loop max 5; fixes via book-editor)
 PHASE 4:    FULL-MANUSCRIPT EVALUATION   → book-evaluator
 PHASE 5:    REVISION                     → book-editor
 PHASE 5.5:  ENTITY UPDATE                → entity-tracker      (UPDATE)
@@ -117,7 +117,7 @@ When you receive an idea, IMMEDIATELY:
 2. Create the project directory:
 
 ```
-~/Desktop/livros/{slug}/
+./livros/{slug}/          ← default under the current working directory; use the directory the user names if they name one. Never assume a Desktop folder exists.
 ├── STATE.yaml
 ├── ENTITY_STATE.yaml
 ├── premise.md
@@ -206,7 +206,7 @@ Write outline to: {path}/outline.md
 This is dispatch 1 of 2. Voice DNA comes in your second dispatch — do NOT write voice-dna.md yet."
 ```
 
-After agent returns: verify foundation.md, outline.md, and voice-bank/ exist. Update STATE.yaml (`chapters.total_planned`, character count).
+After agent returns: verify foundation.md, outline.md, and voice-bank/ exist. Update STATE.yaml (`chapters.total_planned`, character count, and `genesis_score.dimensions.dimension_7.name` — take it from foundation.md Section 7 STYLISTIC DEVICE; if the book has no device, set `market`. The evaluator reads this field and has no default of its own, so an empty name means Dimension 7 is never scored).
 
 ### PHASE 2.5: VOICE DNA  (second book-architect dispatch — "voice mode")
 
@@ -328,9 +328,9 @@ Update {path}/ENTITY_STATE.yaml incrementally — new facts, knowledge gained (w
 **Step E — Mechanical Preprocess (bash, no agent):**
 Run directly with the Bash tool against `chapter-{N}.md`:
 1. Count em-dashes: `grep -o '—' {chapter} | wc -l`
-2. If count exceeds the genre threshold, replace obvious cases with periods/commas via sed.
+2. If count exceeds the genre threshold, LIST the offending lines (`grep -n '—' {chapter}`) in the preprocess log for the editor. Do NOT auto-replace prose with sed — blind substitution inside dialogue and quoted speech corrupts text the evaluator will then score.
 3. Grep Pattern #11: `grep -n 'not because\|not .*, but\|the kind of .* that' {chapter}`
-4. Count adverbs: `grep -oiP '\w+ly\b' {chapter} | wc -l`
+4. Count adverbs: `grep -oiE '[[:alpha:]]+ly([^[:alpha:]]|$)' {chapter} | wc -l` (POSIX classes only — `-P`/PCRE does not exist in macOS BSD grep, and this step must run on any machine)
 5. Check sentence starts; flag 3+ consecutive identical openers.
 6. Log results to `evaluations/preprocess-chapter-{N}.md`.
 
@@ -340,7 +340,7 @@ Dispatch: book-evaluator
 Prompt: "Evaluate chapter {N} of '{title}'.
 Project dir: {path}
 Score against: {path}/outline.md (emotional anchor, emotional surprise, chaos moments), {path}/voice-dna.md, {path}/research/bestseller-dna.md, the previous chapter, and {path}/reader-personas.md.
-Run: Genesis Score (7 dimensions — read STATE.yaml for which Dimension 7 applies), 20-pattern anti-AI scan (genre targets), 5-reader simulation (Devourer, Critic, Hostile, Casual, Devoted — Primary persona feeds Devourer/Devoted, Hostile persona feeds Hostile/Critic), character chaos check, Tomorrow Test.
+Run: Genesis Score (7 dimensions — read STATE.yaml for which Dimension 7 applies), 20-pattern anti-AI scan (genre targets), 4-reader simulation (Devourer, Critic, Hostile, Casual — add the Devoted Reader only when the genre activates it: SFF, literary, series, complex NF; Primary persona feeds Devourer/Devoted, Hostile persona feeds Hostile/Critic), character chaos check, Tomorrow Test.
 {If N==1: Run Discovery Test (BUY/MAYBE/PUT BACK)}
 {If N==last: Run Residue Test}
 Report Genesis Floor AND Average. Write evaluation to: {path}/evaluations/eval-chapter-{N}.md"

@@ -2,10 +2,11 @@
 
 ## Supported versions
 
-Best Seller Studio uses `MAJOR.MINOR` versioning. Security fixes are applied to the latest minor of the current major version.
+Book Genesis uses semantic versioning. Imagination Edition is released as `5.0.0b1` in Python packaging and `v5.0.0-beta.1` on GitHub. The beta is actively maintained alongside the existing version support policy below.
 
 | Version | Supported |
 |---------|-----------|
+| V5.0.0 beta | Active beta; report reproducible security issues |
 | V4.2.x  | ✅ current |
 | V4.1.x  | ⚠️ critical fixes only |
 | V4.0.x  | ⚠️ critical fixes only |

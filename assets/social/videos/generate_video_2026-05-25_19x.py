@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # Book Genesis flagship video — 2026-05-25
-# Angle: "Pipeline beats prompt — the 19x gap (same model underneath)"
+# Angle: "A reviewable project beats an opaque chat transcript"
 # Reuses the editorial PIL-slides + ffmpeg house style.
 import sys, math, subprocess
 from PIL import Image, ImageDraw, ImageFont
@@ -82,17 +82,17 @@ def frame_base(label):
 T = {
  'en':{
   'lab':["I · THE GAP","II · THE NUMBERS","III · THE REVEAL","IV · WHY","V · THE FIX","VI · THE LESSON",""],
-  'hook1':"Same prompt.",'hook2':"Same model underneath.",'hook3':"So why a 19x gap?",
+  'hook1':"One idea.",'hook2':"A durable project record.",'hook3':"See what changed and why.",
   'cmp_cap':"One brief. Two systems.",
-  'cmpA_name':"PLAIN CHATGPT",'cmpA_v':"3,140",'cmpA_u':"words · 12 sec",
-  'cmpB_name':"BOOK GENESIS",'cmpB_v':"60,800",'cmpB_u':"words · 4h 30",
-  'cmp_sub':"Same Claude model powering both.",
+  'cmpA_name':"CHAT TRANSCRIPT",'cmpA_v':"ONE",'cmpA_u':"opaque response",
+  'cmpB_name':"BOOK GENESIS",'cmpB_v':"PROJECT",'cmpB_u':"saved artifacts + report",
+  'cmp_sub':"This is a workflow comparison, not a performance benchmark.",
   'rev1':"The model wasn't the difference.",'rev2':"The architecture was.",
   'why_cap':"One prompt = one call to do 8 jobs:",
   'why_list':"Plan · Characters · Theme · Tone\nProse · Pacing · Audit · Ending",
   'why_punch':"So the model does what models do:\nit averages.",
   'fix_cap':"The pipeline splits the work.",
-  'fix_big':"15 skills · 8 phases",
+  'fix_big':"Draft · read blind · revise · review",
   'fix1':"Each phase writes a durable artifact.",
   'fix2':"The next phase reads it from disk.",
   'fix3':"The model never holds the whole book\nin its head.",
@@ -106,17 +106,17 @@ T = {
  },
  'pt':{
   'lab':["I · O GAP","II · OS NÚMEROS","III · A VIRADA","IV · POR QUÊ","V · A SOLUÇÃO","VI · A LIÇÃO",""],
-  'hook1':"Mesmo prompt.",'hook2':"Mesmo modelo por baixo.",'hook3':"Então por que 19x de diferença?",
+  'hook1':"Uma ideia.",'hook2':"Um registro durável de projeto.",'hook3':"Veja o que mudou e por quê.",
   'cmp_cap':"Um brief. Dois sistemas.",
-  'cmpA_name':"CHATGPT PURO",'cmpA_v':"3.140",'cmpA_u':"palavras · 12 seg",
-  'cmpB_name':"BOOK GENESIS",'cmpB_v':"60.800",'cmpB_u':"palavras · 4h30",
-  'cmp_sub':"O mesmo modelo Claude nos dois.",
+  'cmpA_name':"TRANSCRIÇÃO DE CHAT",'cmpA_v':"UMA",'cmpA_u':"resposta opaca",
+  'cmpB_name':"BOOK GENESIS",'cmpB_v':"PROJETO",'cmpB_u':"artefatos + relatório salvos",
+  'cmp_sub':"É uma comparação de workflow, não um benchmark de desempenho.",
   'rev1':"O modelo não era a diferença.",'rev2':"A arquitetura era.",
   'why_cap':"Um prompt = uma chamada pra fazer 8 coisas:",
   'why_list':"Plano · Personagens · Tema · Tom\nProsa · Pacing · Auditoria · Final",
   'why_punch':"Aí o modelo faz o que modelo faz:\ntira média.",
   'fix_cap':"O pipeline divide o trabalho.",
-  'fix_big':"15 skills · 8 fases",
+  'fix_big':"Escreva · leia às cegas · revise · revise o relatório",
   'fix1':"Cada fase escreve um artefato durável.",
   'fix2':"A próxima fase lê do disco.",
   'fix3':"O modelo nunca segura o livro inteiro\nna cabeça.",
@@ -161,14 +161,6 @@ def sc_compare(d,t,dur):
     yA=H*0.30; yB=yA+ch+int(M*0.05)
     panel(d,x0,yA,cw,ch,L['cmpA_name'],L['cmpA_v'],L['cmpA_u'],lin(t,0.5,1.0)*a,accent=False)
     panel(d,x0,yB,cw,ch,L['cmpB_name'],L['cmpB_v'],L['cmpB_u'],lin(t,1.3,1.8)*a,accent=True)
-    # 19x badge
-    ba=lin(t,2.2,2.7)*a
-    if ba>0:
-        bs=int(M*0.075); bx=CX; by=(yA+ch+yB)/2
-        d.ellipse([bx-bs,by-bs*0.62,bx+bs,by+bs*0.62],fill=fade(ACCENT,ba))
-        ft=font('serifb',int(M*0.05))
-        txt="19x"
-        d.text((bx-tw(d,txt,ft)/2,by-lineh(ft)*0.42),txt,font=ft,fill=fade(BG,ba))
     sub=font('serifi',int(M*0.034))
     block(d,wrap(d,L['cmp_sub'],sub,CW),sub,CX,yB+ch+int(M*0.04),fade(INK_SOFT,lin(t,2.8,3.3)*a),1.05)
 

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "book-genesis"
+version = "5.0.0b1"
+description = "Your idea, your story. An open-source writing workflow with model feedback, saved revisions, and local manuscript exports."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+# rich draws the guided session (ADR 0009). It is the only dependency, pure Python, and the
+# runner falls back to plain lines when it is missing, so an offline install still works.
+dependencies = ["rich>=13"]
+
+[project.scripts]
+book-genesis = "runner.app:main"
+
+[tool.setuptools]
+packages = ["runner"]
+
+[tool.setuptools.package-data]
+runner = ["config/*.yaml", "data/**/*"]

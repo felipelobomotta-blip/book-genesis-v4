@@ -29,7 +29,21 @@ You produce: A revised chapter that fixes identified issues while preserving (or
 5. **Read `foundation.md`** — Especially voice definition and character profiles.
 6. **Read voice bank samples** — Re-calibrate your ear to the target voice.
 7. **Read the previous chapter** — Ensure your changes don't break continuity.
-8. **Read `research/bestseller-dna.md`** if it exists. Key revision targets: Flesch-Kincaid ≤ Grade 7, adverbs < 105/10K words, dialogue 25-35%, "said" as dominant tag, concrete sensory > abstract, vulnerability before competence.
+8. **Read `research/bestseller-dna.md`** if it exists. Key revision targets: Flesch-Kincaid ≤ Grade 7, adverbs < 105/10K words, dialogue inside the genre range from bestseller-dna.md Section 4 (literary 15-35%, memoir 10-30%, thriller 30-50%, romance 30-45%, prescriptive NF 0-15% — not a flat 25-35%), "said" as dominant tag, concrete sensory > abstract, vulnerability before competence.
+
+## MODES (requested by a blind reader; the runner lists which apply)
+
+When the runner hands you a chapter it also hands you what a blind reader said: where attention left the page, and which of these modes to run. Run only the modes listed. Each is surgical: change the smallest span of text that fixes the complaint.
+
+- **hook** — Rewrite only the first 3-5 sentences and/or the last 3-5 sentences. The opening must pull with one specific, concrete detail or an unanswered question; the ending must refuse to let the reader stop (a turn, a withheld answer, an image that lands late). Vary the hook type from what a reader would expect. Preserve every fact.
+- **dialogue** — Every speaker distinguishable by voice alone: vocabulary, rhythm, what they avoid saying. Cut lines where people say exactly what they mean; move the meaning under the line. "Said" as the dominant tag; beats instead of adverbs. Touch only dialogue and its immediate mechanics.
+- **pacing** — Find the span where the reader skimmed. Cut what repeats an effect already landed; compress summary; make sentence rhythm change with the scene's speed. Do not add.
+- **ai_pattern** — Remove balanced triplets, tidy closing morals, explained metaphors, "not X but Y" constructions, rhetorical questions in the narrator's mouth, sentences that summarize the paragraph they end. Replace with one concrete, specific thing, or with nothing.
+- **exposition** — Convert told information into something a character does, notices, avoids, or gets wrong. If it cannot be dramatized, cut it and trust the reader.
+- **voice** — Restore the narrator's specific way of seeing: the one comparison only this narrator would make, the thing this narrator notices that a generic narrator would not. Reread the chapter's best paragraph and bring the flagged span up to it.
+- **continuity** — Fix the contradiction the reader hit (name, place, object, timeline, what a character could know). Change the fewest words that make it true.
+
+Whatever the modes, always work on the exact passage where the reader's attention left the page.
 9. **Understand the CVI context (V3.4).** If the Orchestrator dispatched you to fix CVI-Launch issues (commercial pacing, shareability, casual reader), focus on COMMERCIAL readability — short paragraphs, chapter hooks, curiosity gaps. If dispatched to fix CVI-Legacy issues (originality, theme depth, re-readability), focus on CRAFT depth — subtext, layered meaning, re-read rewards. The evaluation report will specify which CVI metric is weak.
 10. **Create a revision plan** before touching any prose.
 

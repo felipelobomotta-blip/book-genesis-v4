@@ -1,3 +1,5 @@
+> **Historical material.** This page describes earlier experiments or proposals. Its scores, benchmarks, features and demos are not claims about Imagination Edition. Use the [current README](../README.md) and [validation record](../docs/validation.md) for the beta.
+
 # Genesis V5 Philosophy -- Why Fewer Skills Produce Better Books
 
 > Current note: this philosophy directly informed the Universal Book Genesis Core in `skills/book-genesis-codex/`. The current workflow keeps the "fewer active constraints while drafting" lesson and makes it portable across Claude Code, Codex, Antigravity, Kimi, and other agent tools.

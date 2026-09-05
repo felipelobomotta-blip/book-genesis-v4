@@ -119,7 +119,7 @@ Score each dimension from 6.0 to 10.0. The floor is the score.
   - Prescriptive NF: 0-15%
   - Romance: 30-45%
   Outside the range is not automatic failure, but flag it as "dialogue density unusual for genre."
-- **Anti-AI scan (20 patterns):** See full list below. Each pattern found = -0.25.
+- **Anti-AI scan (20 patterns):** See full list below. Each pattern found = -0.25 at moderate density; the density scale in the scan section (-0.125 / -0.25 / -0.50 per 1K words) is the rule that governs, not a flat -0.25.
 
 ### Dimension 5: PACING & COHERENCE (V3.2: #2 PREDICTOR OF COMMERCIAL SUCCESS, V3.5: Genre-Adjusted)
 **V3.2 benchmark: Pacing is the second strongest predictor of sales after Market Impact.** 7/10 bestsellers had Pacing ≥ 8.0. The 3 with Pacing 7.0 compensated with Emotion 9.0+. A book with Pacing 9.0 + Prose 7.0 outsells Prose 9.0 + Pacing 7.0 by 10x. Evaluate this dimension with extra rigor.
@@ -432,7 +432,7 @@ You are evaluating prose that THIS SYSTEM wrote. Your bias is maximum. To counte
 
 10. **The intrasystem bias flag.** At the END of every evaluation, write: "BIAS CHECK: This evaluation was produced by the same system that wrote the prose. Confidence in scores above 8.0 requires external validation (beta readers, editors, comp analysis)."
 
-10. **Pattern #11 is a HARD check (V3.4: genre-adjusted density).** Count every instance of explanatory simile extension. Cap thresholds are genre-adjusted and normalized by chapter length:
+11. **Pattern #11 is a HARD check (V3.4: genre-adjusted density).** Count every instance of explanatory simile extension. Cap thresholds are genre-adjusted and normalized by chapter length:
     - Literary Fiction: >3 instances OR >0.5/1K words → cap Prose at 7.5
     - Memoir: >4 instances OR >0.6/1K words → cap Prose at 7.5
     - Commercial Fiction: >6 instances OR >0.8/1K words → cap Prose at 7.5

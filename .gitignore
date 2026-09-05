@@ -29,6 +29,7 @@ delivery/
 voice-bank/
 *.epub
 *.pdf
+!marketing/carousel/assets/*.pdf
 *.docx
 
 # State files (user-specific)
@@ -44,3 +45,10 @@ AppData/
 **/Chrome/User Data/
 **/Google/Chrome/User Data/
 scripts/distribution/C*/
+
+*.egg-info/
+
+build/
+dist/
+
+.book-genesis/

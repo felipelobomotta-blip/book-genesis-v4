@@ -1,0 +1,8 @@
+gemini:
+  command: python runner/bridge_gemini.py {model}
+  requires:
+    - agy
+muse-spark:
+  command: python runner/bridge_opencode.py {model}
+  requires:
+    - opencode

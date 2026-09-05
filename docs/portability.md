@@ -1,135 +1,38 @@
 # Portability
 
-Book Genesis is agent-agnostic by design. It is a folder of markdown instructions, phase prompts, manifests, scoring rules, and file contracts. Any agent that can read files and write project artifacts can run it.
+Book Genesis is a local Python CLI that uses model routes already available to the author. The runner, not an external agent skill, is the supported way to create, resume, audit, review, and export a project.
 
-The repository has two layers:
+## Runtime requirements
 
-1. The **Universal Book Genesis Core** in `skills/book-genesis-codex/`.
-2. The legacy Claude Code system in `skills/`, `agents/`, and `knowledge/`.
+- Python 3.10 or later.
+- Windows, macOS, or Linux with a supported provider route.
+- A writable local project directory.
 
-The `book-genesis-codex` folder name is historical and kept for compatibility. It does not mean the pipeline only works in Codex.
+Install a source checkout with `python -m pip install -e .`, then run `book-genesis setup` and `book-genesis doctor`. The wheel bundles the runner’s prompt resources and can run outside the source checkout.
 
-## Minimum Portable Package
+## Provider routes
 
-Minimum:
+| Route | Status | Notes |
+|---|---|---|
+| Claude Code CLI | Supported | Uses the author’s logged-in CLI session. Claude is invoked with tools disabled in safe mode. |
+| Codex CLI | Supported | Uses an ephemeral session, a temporary directory, and a read-only sandbox. This is not a claim that every host-level tool is disabled. |
+| OpenAI-compatible or Anthropic-compatible endpoint | Supported through `setup` | The author configures and pays the chosen provider. |
+| Ollama or LM Studio | Supported through compatible local-server setup | Model availability and quality depend on the local installation. |
+| Declared command adapter | Supported contract | Add a command template and optional `requires` list in `~/.book-genesis/adapters.yaml`; the command determines its own capabilities. |
+| Manual copy/paste | Supported | `--manual` writes local prompt files and waits for pasted responses. |
 
-```text
-skills/book-genesis-codex/
-```
+The default role plan prefers different model families for writer and judge. When that is not possible, a single-family run is allowed and recorded as a warning. No route makes model feedback equivalent to human editorial validation.
 
-Recommended:
+## Platform evidence
 
-```text
-AGENTS.md
-skills/book-genesis-codex/
-docs/book-genesis-codex.md
-docs/portability.md
-docs/book-gallery.md
-examples/cases/
-assets/covers/
-```
+The current beta was verified locally on Windows with Python 3.11: 279 offline tests passed in the September 2026 quality verification, including recovery, history integrity, the audit gate, reader/export flows, and wheel installation outside the checkout. The GitHub Actions matrix also passed on Ubuntu and Windows with Python 3.10 and 3.12 for commit `4ba8ce2`. See the [recorded CI run](https://github.com/felipelobomotta-blip/book-genesis-v4/actions/runs/33947757174). This verifies software checks and wheel builds; it does not verify every live provider route.
 
-Do not copy only `SKILL.md`; the skill will lose the phase prompts, manifest, orchestration rules, and scoring contract.
+Provider behavior also varies by installed CLI version, operating system, account access, context window, and network conditions. The repository contains deterministic tests and limited real-provider probes; it does not claim that every advertised route has been live-tested on every platform.
 
-## Claude Code
+## What ports and what does not
 
-Claude Code supports multi-file skills with `SKILL.md` plus supporting resources. Install with:
+The project directory format, Markdown prompts, YAML state, review HTML, Markdown export, and EPUB export are local files. They can be inspected, copied, and backed up without a hosted service.
 
-```bash
-./install.sh
-```
+The legacy `skills/book-genesis-codex/` folder contains phase references bundled into the runner. It is not an installation recipe for every agent host. Do not rely on obsolete skill-installer paths or chat-only commands as the current product interface. Use the CLI and the operational [runner reference](runner.md).
 
-or on Windows:
-
-```powershell
-.\install.ps1
-```
-
-The installer copies the full skill folders into `~/.claude/skills/`, including `references/`.
-
-Invocation:
-
-```text
-/book-genesis-codex
-```
-
-The older commands remain available:
-
-- `/book-genesis` for the V5 Craft Mode orchestrator
-- `/book-genesis-full` for the full V4/V5 production pipeline
-
-## Codex
-
-Codex can use the core directly from the repo or from Felipe's local skill directory. The important part is that the whole folder is available, not just `SKILL.md`, because the phase prompts live under `references/`.
-
-Expected behavior:
-
-- load `AGENTS.md` or `skills/book-genesis-codex/SKILL.md`
-- read `references/pipeline/manifest.yaml`
-- load only the active phase prompt
-- write project state and artifacts to files
-- update `PROJECT_STATE.yaml` after every phase or chapter block
-
-## Antigravity
-
-Antigravity-style IDEs do not need native skill support. Open the repository and tell the agent:
-
-```text
-Use Book Genesis. Follow AGENTS.md and the phase order in skills/book-genesis-codex/references/pipeline/manifest.yaml.
-Persist every important decision to files.
-Only load the active phase prompt.
-Do not skip adversarial audit.
-```
-
-If the agent asks for the relevant files, provide:
-
-```text
-AGENTS.md
-skills/book-genesis-codex/SKILL.md
-skills/book-genesis-codex/references/pipeline/manifest.yaml
-```
-
-## Kimi
-
-Kimi can run Book Genesis as a file-backed playbook. Use the same package:
-
-```text
-skills/book-genesis-codex/
-```
-
-Then give this instruction:
-
-```text
-You are running Book Genesis. Read SKILL.md, then follow the manifest one phase at a time. Create PROJECT_STATE.yaml and ASSUMPTIONS.md. Write artifacts to files. Audit before scoring.
-```
-
-If Kimi is being used in a chat-only context, paste `AGENTS.md`, `SKILL.md`, and the active phase prompt. For serious book work, keep a project folder and update the files between turns.
-
-## Other Agents
-
-The minimum requirements are:
-
-- can read a folder of markdown files
-- can follow a YAML or markdown phase manifest
-- can create and update files
-- can keep project state across turns
-- can separate drafting, audit, scoring, and packaging
-
-Use this generic instruction:
-
-```text
-Run Book Genesis as a file-backed book production pipeline. Read AGENTS.md first. Use skills/book-genesis-codex/SKILL.md as the operating loop. Follow the manifest exactly. Load only the active phase prompt. Persist decisions to files. Never score before adversarial audit.
-```
-
-## Why It Ports Cleanly
-
-Book Genesis avoids tool-specific dependencies:
-
-- no external API is required
-- no database is required
-- no build step is required
-- prompts are plain markdown
-- project state is plain YAML/markdown
-- quality control is defined as written contracts, not hidden runtime logic
-
-That is why the same core can work in Claude Code, Codex, Antigravity, Kimi, and most capable coding agents.
+Long manuscripts may exceed a selected provider’s context window during the full-manuscript audit. The beta does not yet provide a chunked audit design with equivalent guarantees. This is a current limit, not a portability failure hidden by a fallback.

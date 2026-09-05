@@ -1,6 +1,8 @@
+> **Historical material.** This page describes earlier experiments or proposals. Its scores, benchmarks, features and demos are not claims about Imagination Edition. Use the [current README](../README.md) and [validation record](../docs/validation.md) for the beta.
+
 # Skills Reference -- Book Genesis V4
 
-> Current note: this is the legacy V4/V5 skill reference. For the portable agent-agnostic core, see `skills/book-genesis-codex/` and `docs/book-genesis-codex.md`.
+> Current note (2026-09-02): this is the legacy V4/V5 skill reference. Most of the skills described below now live in `legacy/skills/` (moved by ADR 0001, not deleted). The canonical path is the runner: see `docs/runner.md`. Skills still under `skills/` (bestseller studio, swarm panel, literary agent panel, copy-editing, humanizer, prose-craft and friends) remain usable standalone.
 
 Market-level add-ons live beside the universal core. The current public positioning is the **Book Genesis Bestseller Skills Suite**:
 

@@ -34,6 +34,8 @@ Create and update:
 - ending turn
 - tension map
 
+Chapter headings are a contract with the runner: every chapter is its own Markdown heading, exactly `## Chapter N: Title` (or `## Capítulo N: Título` when the book is in Portuguese), numbered from 1 with no gaps, one heading per chapter. Bold lines, table rows and list items are not chapter headings; the runner will not find them.
+
 ## Opening Strategy Requirements
 
 `07-opening-strategy.md` must include:

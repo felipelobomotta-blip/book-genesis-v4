@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">Book Genesis 5 — Imagination Edition</title>
+  <desc id="desc">An open book, a small spark, and an invitation to turn an idea into a manuscript. Open source, author led.</desc>
+  <defs>
+    <linearGradient id="paper" x2="1" y2="1"><stop stop-color="#f8f1e5"/><stop offset="1" stop-color="#ede0ca"/></linearGradient>
+    <linearGradient id="ink" x2="0" y2="1"><stop stop-color="#263d37"/><stop offset="1" stop-color="#142823"/></linearGradient>
+  </defs>
+  <rect width="1280" height="640" rx="16" fill="url(#paper)"/>
+  <path d="M54 46H1226M54 594H1226" stroke="#c7b79d"/>
+  <text x="72" y="95" fill="#9d4e2e" font-family="Arial, sans-serif" font-weight="700" font-size="16" letter-spacing="3">BOOK GENESIS 5 · IMAGINATION EDITION</text>
+  <text x="72" y="214" fill="#152f28" font-family="Georgia, serif" font-size="76" letter-spacing="-3">Creativity</text>
+  <text x="72" y="300" fill="#152f28" font-family="Georgia, serif" font-size="76" letter-spacing="-3">comes first.</text>
+  <text x="76" y="385" fill="#5b6558" font-family="Arial, sans-serif" font-size="28">Your story. Your choices.</text>
+  <rect x="76" y="473" width="276" height="47" rx="23.5" fill="#1e3b31"/>
+  <text x="214" y="503" text-anchor="middle" fill="#faf4e8" font-family="Arial, sans-serif" font-size="15" letter-spacing="2">OPEN SOURCE · BETA</text>
+  <g transform="translate(787 120)">
+    <circle cx="215" cy="200" r="178" fill="#e6d6bc"/>
+    <path d="M50 176Q126 152 204 193V383Q126 342 50 365Z" fill="#bcc1a8"/>
+    <path d="M204 193Q280 147 368 176V365Q280 342 204 383Z" fill="url(#ink)"/>
+    <path d="M62 162Q132 141 204 185V365Q133 324 62 348Z" fill="#fffaf0"/>
+    <path d="M204 185Q278 139 356 162V348Q277 324 204 365Z" fill="#f5ecd8"/>
+    <path d="M204 185V365" stroke="#b9a887" stroke-width="2"/>
+    <g fill="none" stroke="#c2b69c" stroke-width="3" stroke-linecap="round">
+      <path d="M85 209Q132 199 177 220M85 235Q132 225 177 246M85 261Q132 251 165 267"/>
+      <path d="M231 220Q281 197 330 208M231 246Q281 223 330 234M231 272Q281 249 312 258"/>
+    </g>
+    <path d="M217 25L231 72L278 86L231 100L217 147L203 100L156 86L203 72Z" fill="#b15b37"/>
+    <circle cx="301" cy="60" r="6" fill="#b15b37"/><circle cx="151" cy="127" r="4" fill="#b15b37"/>
+    <path d="M325 322V374L307 363L289 378V326" fill="#b15b37"/>
+  </g>
+  <text x="76" y="570" fill="#686b5d" font-family="Arial, sans-serif" font-size="14">IDEA → OUTLINE → DRAFT → FEEDBACK → YOUR NEXT REVISION</text>
+</svg>

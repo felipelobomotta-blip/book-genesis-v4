@@ -1,104 +1,54 @@
 #!/usr/bin/env bash
+# Install the Book Genesis runtime from this checkout on macOS or Linux.
 set -euo pipefail
 
-# Book Genesis installer for macOS/Linux.
-# Installs full skill folders, including supporting references, to ~/.claude/.
+REPO_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+cd "$REPO_DIR"
 
-REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILLS_DIR="$REPO_DIR/skills"
-KNOWLEDGE_DIR="$REPO_DIR/knowledge"
-AGENTS_DIR="$REPO_DIR/agents"
-TARGET_SKILLS="$HOME/.claude/skills"
-TARGET_KNOWLEDGE="$HOME/.claude/knowledge"
-TARGET_AGENTS="$HOME/.claude/agents"
-
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-NC='\033[0m'
-
-echo ""
-echo -e "${BLUE}Book Genesis${NC}"
-echo -e "${YELLOW}V4/V5 legacy system + portable Codex edition${NC}"
-echo ""
-echo -e "${YELLOW}Installing skills, supporting references, agents, and knowledge base${NC}"
-echo ""
-
-if [ ! -d "$SKILLS_DIR" ]; then
-  echo -e "${RED}Error: skills/ directory not found. Run this script from the repository root.${NC}"
+if [ ! -f "$REPO_DIR/pyproject.toml" ]; then
+  echo "Error: pyproject.toml was not found beside this script." >&2
   exit 1
 fi
 
-mkdir -p "$TARGET_SKILLS" "$TARGET_KNOWLEDGE" "$TARGET_AGENTS"
+PYTHON=""
 
-# Skills live at skills/<name>/ AND in grouping folders like skills/optional/<name>/.
-# Discover SKILL.md at any depth so nested groups are not silently skipped.
-# skills/deprecated/ is intentionally excluded — those are superseded by agents/.
-count=0
-while IFS= read -r skill_file; do
-  skill_dir=$(dirname "$skill_file")
-  skill_name=$(basename "$skill_dir")
-  case "$skill_dir" in
-    */deprecated/*) continue ;;
-  esac
-  rm -rf "$TARGET_SKILLS/$skill_name"
-  mkdir -p "$TARGET_SKILLS/$skill_name"
-  cp -R "$skill_dir/." "$TARGET_SKILLS/$skill_name/"
-  echo -e "  ${GREEN}+${NC} $skill_name"
-  count=$((count + 1))
-done < <(find "$SKILLS_DIR" -maxdepth 3 -name SKILL.md -type f | sort)
-
-kb_count=0
-if [ -d "$KNOWLEDGE_DIR" ]; then
-  for kb_file in "$KNOWLEDGE_DIR"/*.md; do
-    if [ -f "$kb_file" ]; then
-      cp "$kb_file" "$TARGET_KNOWLEDGE/"
-      echo -e "  ${GREEN}+${NC} knowledge/$(basename "$kb_file")"
-      kb_count=$((kb_count + 1))
+# An activated virtual environment is an explicit author choice. Use its interpreter
+# directly before searching PATH, while retaining the usual macOS/Linux commands as
+# portable fallbacks.
+if [ -n "${VIRTUAL_ENV:-}" ]; then
+  for candidate in "$VIRTUAL_ENV/bin/python" "$VIRTUAL_ENV/Scripts/python.exe"; do
+    if [ -x "$candidate" ] && "$candidate" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
+      PYTHON="$candidate"
+      break
     fi
   done
 fi
 
-agent_count=0
-if [ -d "$AGENTS_DIR" ]; then
-  for agent_file in "$AGENTS_DIR"/*.md; do
-    if [ -f "$agent_file" ]; then
-      cp "$agent_file" "$TARGET_AGENTS/"
-      echo -e "  ${GREEN}+${NC} agent/$(basename "$agent_file")"
-      agent_count=$((agent_count + 1))
-    fi
-  done
-fi
-
-# Verify every subagent_type the orchestrator dispatches is actually installed.
-# A missing one stalls the pipeline mid-run, so fail loudly here instead.
-PIPELINE_AGENTS="book-researcher book-architect entity-tracker continuity-guardian book-writer dialogue-polish hook-craft book-disruptor book-evaluator book-editor book-packager"
-missing=""
-for agent in $PIPELINE_AGENTS; do
-  if [ ! -f "$TARGET_AGENTS/$agent.md" ]; then
-    missing="$missing $agent"
+for candidate in python3 python; do
+  if [ -n "$PYTHON" ]; then
+    break
+  fi
+  if ! command -v "$candidate" >/dev/null 2>&1; then
+    continue
+  fi
+  if "$candidate" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)' >/dev/null 2>&1; then
+    PYTHON="$candidate"
+    break
   fi
 done
 
-echo ""
-if [ -n "$missing" ]; then
-  echo -e "${RED}Pipeline incomplete.${NC} The orchestrator dispatches agents that are not installed:"
-  for agent in $missing; do
-    echo -e "  ${RED}-${NC} $agent"
-  done
-  echo ""
-  echo "The book-orchestrator will stall when it reaches one of these."
+if [ -z "$PYTHON" ]; then
+  echo "Error: Book Genesis requires Python 3.10 or newer (tried an active virtual environment, python3, and python)." >&2
   exit 1
 fi
-echo -e "${GREEN}Pipeline verified.${NC} All 11 orchestrator agents resolve."
 
-echo ""
-echo -e "${GREEN}Done.${NC} $count skills + $agent_count agents + $kb_count knowledge files installed"
-echo ""
-echo -e "Skills:    ${BLUE}$TARGET_SKILLS${NC}"
-echo -e "Agents:    ${BLUE}$TARGET_AGENTS${NC}"
-echo -e "Knowledge: ${BLUE}$TARGET_KNOWLEDGE${NC}"
-echo ""
-echo "Open Claude Code and type /book-genesis or /book-genesis-codex to start writing."
-echo ""
+PYTHON_VERSION="$("$PYTHON" -c 'import sys; print(".".join(map(str, sys.version_info[:3])))')"
+echo "Installing Book Genesis with $PYTHON ($PYTHON_VERSION)..."
+"$PYTHON" -m pip install .
+
+echo
+echo "Book Genesis is installed. Next:"
+echo "  book-genesis setup"
+echo "  book-genesis new --idea \"Your idea\" --language en --path books/my-book"
+echo
+echo "The installer did not connect a provider or run a model."

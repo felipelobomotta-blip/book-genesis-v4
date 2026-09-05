@@ -1,0 +1,49 @@
+# Adapter and model per role. Adapters: claude (claude -p), codex (codex exec),
+# manual (write the prompt, stop), fake (tests only). Model aliases follow each CLI:
+# claude accepts opus / sonnet / haiku; codex uses its configured default when empty.
+#
+# The judge defaults to a different model family than the writer on purpose
+# (ADR 0001, decision 9): a system that grades its own prose has maximum bias.
+# Mechanical roles use the cheapest class that does the job.
+
+writer:
+  adapter: claude
+  model: opus
+
+disruptor:
+  adapter: claude
+  model: sonnet
+
+judge:
+  adapter: codex
+  model: ""
+
+editor:
+  adapter: claude
+  model: opus
+
+architect:
+  adapter: claude
+  model: opus
+
+extractor:
+  adapter: claude
+  model: haiku
+
+# The blind reader panel (ADR 0002). It replaces the human checkpoint on chapter 1 and runs
+# on demand with `panel`. Seats whose adapter is not installed fall back to what is, keeping
+# the persona; the runner then records a "single family" warning in RUN_REPORT.md.
+panel_1:
+  adapter: codex
+  model: ""
+  persona: the reader who buys this genre and has read the ten books everyone compares it to
+
+panel_2:
+  adapter: claude
+  model: sonnet
+  persona: the hostile reader who did not want to read this and is looking for a reason to stop
+
+panel_3:
+  adapter: claude
+  model: opus
+  persona: the casual reader who picked this up at an airport and will give it ten pages
